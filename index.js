@@ -13,26 +13,26 @@ const getFormFiles = () => {
 
     const adsAdjustmentsRevenueFile = $("#ads-adjustments-revenue")[0].files[0];
     if (!adsAdjustmentsRevenueFile) {
-        $("#ads-adjustments-revenue-error").text("Please select file.");
+        $("#ads-adjustments-revenue-error").text("Please select a csv file.");
         validateSuccess = false;
     }
 
     const adsRevenueFile = $("#ads-revenue")[0].files[0];
     if (!adsRevenueFile) {
-        $("#ads-revenue-error").text("Please select file.");
+        $("#ads-revenue-error").text("Please select a csv file.");
         validateSuccess = false;
     }
 
     const paidFeaturesFile = $("#paid-features")[0].files[0];
     if (!paidFeaturesFile) {
-        $("#paid-features-error").text("Please select file.");
+        $("#paid-features-error").text("Please select a csv file.");
         validateSuccess = false;
     }
 
     const subscriptionRevenueRedFile = $("#subscription-revenue-red")[0]
         .files[0];
     if (!subscriptionRevenueRedFile) {
-        $("#subscription-revenue-red-error").text("Please select file.");
+        $("#subscription-revenue-red-error").text("Please select a csv file.");
         validateSuccess = false;
     }
 
@@ -40,20 +40,24 @@ const getFormFiles = () => {
         "#subscription-revenue-red-music"
     )[0].files[0];
     if (!subscriptionRevenueRedMusicFile) {
-        $("#subscription-revenue-red-music-error").text("Please select file.");
+        $("#subscription-revenue-red-music-error").text(
+            "Please select a csv file."
+        );
         validateSuccess = false;
     }
 
     const youtubeShortsAdsFile = $("#youtube-shorts-ads")[0].files[0];
     if (!youtubeShortsAdsFile) {
-        $("#youtube-shorts-ads-error").text("Please select file.");
+        $("#youtube-shorts-ads-error").text("Please select a csv file.");
         validateSuccess = false;
     }
 
     const youtubeShortsSubscriptionFile = $("#youtube-shorts-subscription")[0]
         .files[0];
     if (!youtubeShortsSubscriptionFile) {
-        $("#youtube-shorts-subscription-error").text("Please select file.");
+        $("#youtube-shorts-subscription-error").text(
+            "Please select a csv file."
+        );
         validateSuccess = false;
     }
 
