@@ -1,4 +1,4 @@
-let dataTableGlobal = dataTable; // Dữ liệu toàn bộ
+let dataTableGlobal = []; // Dữ liệu toàn bộ
 let filteredData = dataTableGlobal; // Dữ liệu đã lọc (ban đầu bằng toàn bộ dữ liệu)
 
 const pageSize = 30;
