@@ -1,4 +1,4 @@
-let dataTableGlobal = []; // Dữ liệu toàn bộ
+let dataTableGlobal = dataTable; // Dữ liệu toàn bộ
 let filteredData = dataTableGlobal; // Dữ liệu đã lọc (ban đầu bằng toàn bộ dữ liệu)
 
 const pageSize = 30;
@@ -41,35 +41,35 @@ const renderTable = (data, searchTerm = "") => {
             item[TABLE_COLUMNS.CHANNEL_NAME],
             searchTerm
         );
-        const revenue = highlightText(
+        const revenue = formatNumber(
             item[TABLE_COLUMNS.ADS_ADJUSTMENTS_REVENUE],
             searchTerm
         );
-        const adsRevenue = highlightText(
+        const adsRevenue = formatNumber(
             item[TABLE_COLUMNS.ADS_REVENUE],
             searchTerm
         );
-        const paidFeatures = highlightText(
+        const paidFeatures = formatNumber(
             item[TABLE_COLUMNS.PAID_FEATURES],
             searchTerm
         );
-        const subscriptionRed = highlightText(
+        const subscriptionRed = formatNumber(
             item[TABLE_COLUMNS.SUBSCRIPTION_REVENUE_RED],
             searchTerm
         );
-        const subscriptionRedMusic = highlightText(
+        const subscriptionRedMusic = formatNumber(
             item[TABLE_COLUMNS.SUBSCRIPTION_REVENUE_RED_MUSIC],
             searchTerm
         );
-        const youtubeShortsAds = highlightText(
+        const youtubeShortsAds = formatNumber(
             item[TABLE_COLUMNS.YOUTUBE_SHORTS_ADS],
             searchTerm
         );
-        const youtubeShortsSubscription = highlightText(
+        const youtubeShortsSubscription = formatNumber(
             item[TABLE_COLUMNS.YOUTUBE_SHORTS_SUBSCRIPTION],
             searchTerm
         );
-        const totalRevenue = highlightText(
+        const totalRevenue = formatNumber(
             item[TABLE_COLUMNS.TOTAL_REVENUE],
             searchTerm
         );
@@ -248,8 +248,11 @@ $("#pagination").on("click", "a", function (e) {
 $("#search").on("input", function () {
     const searchTerm = $(this).val().toLowerCase();
     filteredData = dataTableGlobal.filter((item) => {
-        return Object.values(item).some((val) =>
-            String(val).toLowerCase().includes(searchTerm)
+        const valUc = item[TABLE_COLUMNS.CHANNEL_ID];
+        const valName = item[TABLE_COLUMNS.CHANNEL_NAME];
+        return (
+            String(valUc).toLowerCase().includes(searchTerm) ||
+            String(valName).toLowerCase().includes(searchTerm)
         );
     });
 

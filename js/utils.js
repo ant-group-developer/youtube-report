@@ -227,3 +227,7 @@ function validateFileInput(inputId, errorId) {
     fileInput.classList.add("is-valid");
     return true;
 }
+
+const formatNumber = (number) => {
+    return new Intl.NumberFormat("en-US").format(number);
+};

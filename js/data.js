@@ -21802,7 +21802,7 @@ const dataTable = [
     },
     {
         UC: "UCmknJiB1xnivEElYrWQM7xg",
-        Name: "Jairo Lizundia Olympic Physical trainer. ",
+        Name: "Jairo Lizundia Olympic Physical trainer.",
         "Ads Adjustments Revenue": "0.00",
         "Ads Revenue": "0.00",
         "Paid Features": "0.00",
