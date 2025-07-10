@@ -1,0 +1,37 @@
+#table {
+    border-collapse: separate;
+    border-spacing: 0px 0px;
+}
+
+#table thead {
+    top: 54px;
+}
+
+#table th,
+#table td {
+    padding: 0.5rem;
+    border-bottom: var(--bs-border-width) var(--bs-border-style)
+        var(--bs-border-color);
+}
+
+#table th {
+    border-top: var(--bs-border-width) var(--bs-border-style)
+        var(--bs-border-color);
+}
+
+#table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 0;
+}
+
+.highlight {
+    background-color: yellow;
+}
+
+.divider {
+    margin: 2rem 0;
+    height: 1px;
+    background: rgb(222, 226, 230);
+}

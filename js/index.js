@@ -1,65 +1,63 @@
-$("#revenue-share-ratio")[0].defaultValue = 100;
+// Trigger validation on file change and form submit
+$("#csv-form").on("change", 'input[type="file"]', function () {
+    const inputId = $(this).attr("id");
+    const errorId = inputId + "-error"; // Error element id is based on input id
+    validateFileInput(inputId, errorId);
+});
 
 const getFormFiles = () => {
-    $("#ads-adjustments-revenue-error").text("");
-    $("#ads-revenue-error").text("");
-    $("#paid-features-error").text("");
-    $("#subscription-revenue-red-error").text("");
-    $("#subscription-revenue-red-music-error").text("");
-    $("#youtube-shorts-ads-error").text("");
-    $("#youtube-shorts-subscription-error").text("");
+    // Reset lỗi trước khi kiểm tra
+    $(".error-message").text("");
+    $("input[type='file']").removeClass("is-invalid is-valid");
 
     let validateSuccess = true;
 
-    const adsAdjustmentsRevenueFile = $("#ads-adjustments-revenue")[0].files[0];
-    if (!adsAdjustmentsRevenueFile) {
-        $("#ads-adjustments-revenue-error").text("Please select a csv file.");
-        validateSuccess = false;
-    }
+    const validateFile = (fileInputId, errorMessageId) => {
+        const file = $("#" + fileInputId)[0].files[0];
+        const errorMessage = $("#" + errorMessageId);
+        const fileInput = $("#" + fileInputId);
 
-    const adsRevenueFile = $("#ads-revenue")[0].files[0];
-    if (!adsRevenueFile) {
-        $("#ads-revenue-error").text("Please select a csv file.");
-        validateSuccess = false;
-    }
+        if (!file) {
+            errorMessage.text("Please select a csv file.");
+            fileInput.addClass("is-invalid");
+            validateSuccess = false;
+        } else if (!file.name.endsWith(".csv")) {
+            errorMessage.text("Please select a valid csv file.");
+            fileInput.addClass("is-invalid");
+            validateSuccess = false;
+        } else {
+            errorMessage.text("");
+            fileInput.removeClass("is-invalid").addClass("is-valid");
+        }
 
-    const paidFeaturesFile = $("#paid-features")[0].files[0];
-    if (!paidFeaturesFile) {
-        $("#paid-features-error").text("Please select a csv file.");
-        validateSuccess = false;
-    }
+        return file;
+    };
 
-    const subscriptionRevenueRedFile = $("#subscription-revenue-red")[0]
-        .files[0];
-    if (!subscriptionRevenueRedFile) {
-        $("#subscription-revenue-red-error").text("Please select a csv file.");
-        validateSuccess = false;
-    }
-
-    const subscriptionRevenueRedMusicFile = $(
-        "#subscription-revenue-red-music"
-    )[0].files[0];
-    if (!subscriptionRevenueRedMusicFile) {
-        $("#subscription-revenue-red-music-error").text(
-            "Please select a csv file."
-        );
-        validateSuccess = false;
-    }
-
-    const youtubeShortsAdsFile = $("#youtube-shorts-ads")[0].files[0];
-    if (!youtubeShortsAdsFile) {
-        $("#youtube-shorts-ads-error").text("Please select a csv file.");
-        validateSuccess = false;
-    }
-
-    const youtubeShortsSubscriptionFile = $("#youtube-shorts-subscription")[0]
-        .files[0];
-    if (!youtubeShortsSubscriptionFile) {
-        $("#youtube-shorts-subscription-error").text(
-            "Please select a csv file."
-        );
-        validateSuccess = false;
-    }
+    const adsAdjustmentsRevenueFile = validateFile(
+        "ads-adjustments-revenue",
+        "ads-adjustments-revenue-error"
+    );
+    const adsRevenueFile = validateFile("ads-revenue", "ads-revenue-error");
+    const paidFeaturesFile = validateFile(
+        "paid-features",
+        "paid-features-error"
+    );
+    const subscriptionRevenueRedFile = validateFile(
+        "subscription-revenue-red",
+        "subscription-revenue-red-error"
+    );
+    const subscriptionRevenueRedMusicFile = validateFile(
+        "subscription-revenue-red-music",
+        "subscription-revenue-red-music-error"
+    );
+    const youtubeShortsAdsFile = validateFile(
+        "youtube-shorts-ads",
+        "youtube-shorts-ads-error"
+    );
+    const youtubeShortsSubscriptionFile = validateFile(
+        "youtube-shorts-subscription",
+        "youtube-shorts-subscription-error"
+    );
 
     if (!validateSuccess) {
         return;
@@ -158,12 +156,7 @@ const getAllCsvData = async (values) => {
     };
 };
 
-const processRevenueData = (
-    data,
-    revenueColumn,
-    tableData,
-    revenueShareRatio
-) => {
+const processRevenueData = (data, revenueColumn, tableData) => {
     data.forEach((item) => {
         const { channelId, channelName, channelRev } = item;
         let value = tableData.get(channelId);
@@ -180,13 +173,11 @@ const processRevenueData = (
                 [TABLE_COLUMNS.YOUTUBE_SHORTS_ADS]: 0,
                 [TABLE_COLUMNS.YOUTUBE_SHORTS_SUBSCRIPTION]: 0,
                 [TABLE_COLUMNS.TOTAL_REVENUE]: 0,
-                [TABLE_COLUMNS.ANT_SHARE]: 0,
             };
         }
 
         value[revenueColumn] += channelRev;
         value[TABLE_COLUMNS.TOTAL_REVENUE] += channelRev;
-        value[TABLE_COLUMNS.ANT_SHARE] += channelRev * revenueShareRatio;
 
         tableData.set(channelId, value);
     });
@@ -205,62 +196,49 @@ const convertTableData = (allCsvData) => {
 
     const tableData = new Map();
 
-    const revenueShareRatio = ($("#revenue-share-ratio")[0].value || 100) / 100;
-
     // Ads Adjustments Revenue
     processRevenueData(
         dataAdsAdjustmentsRevenue,
         TABLE_COLUMNS.ADS_ADJUSTMENTS_REVENUE,
-        tableData,
-        revenueShareRatio
+        tableData
     );
 
     // Ads Revenue
-    processRevenueData(
-        dataAdsRevenue,
-        TABLE_COLUMNS.ADS_REVENUE,
-        tableData,
-        revenueShareRatio
-    );
+    processRevenueData(dataAdsRevenue, TABLE_COLUMNS.ADS_REVENUE, tableData);
 
     // Paid Features
     processRevenueData(
         dataPaidFeatures,
         TABLE_COLUMNS.PAID_FEATURES,
-        tableData,
-        revenueShareRatio
+        tableData
     );
 
     // Subscription Revenue Red
     processRevenueData(
         dataSubscriptionRevenueRed,
         TABLE_COLUMNS.SUBSCRIPTION_REVENUE_RED,
-        tableData,
-        revenueShareRatio
+        tableData
     );
 
     // Subscription Revenue Red Music
     processRevenueData(
         dataSubscriptionRevenueRedMusic,
         TABLE_COLUMNS.SUBSCRIPTION_REVENUE_RED_MUSIC,
-        tableData,
-        revenueShareRatio
+        tableData
     );
 
     // YouTube Shorts Ads
     processRevenueData(
         dataYoutubeShortsAds,
         TABLE_COLUMNS.YOUTUBE_SHORTS_ADS,
-        tableData,
-        revenueShareRatio
+        tableData
     );
 
     // YouTube Shorts Subscription
     processRevenueData(
         dataYoutubeShortsSubscription,
         TABLE_COLUMNS.YOUTUBE_SHORTS_SUBSCRIPTION,
-        tableData,
-        revenueShareRatio
+        tableData
     );
 
     const result = Array.from(tableData, ([_, value]) => {
@@ -280,8 +258,6 @@ const convertTableData = (allCsvData) => {
             value[TABLE_COLUMNS.YOUTUBE_SHORTS_SUBSCRIPTION].toFixed(2);
         value[TABLE_COLUMNS.TOTAL_REVENUE] =
             value[TABLE_COLUMNS.TOTAL_REVENUE].toFixed(2);
-        value[TABLE_COLUMNS.ANT_SHARE] =
-            value[TABLE_COLUMNS.ANT_SHARE].toFixed(2);
 
         return {
             ...value,
@@ -290,7 +266,10 @@ const convertTableData = (allCsvData) => {
             ),
         };
     });
-    return result;
+    return result.toSorted(
+        (a, b) =>
+            b[TABLE_COLUMNS.TOTAL_REVENUE] - a[TABLE_COLUMNS.TOTAL_REVENUE]
+    );
 };
 
 const onSubmit = async (e) => {
@@ -304,16 +283,16 @@ const onSubmit = async (e) => {
             hideLoading();
             return;
         }
-        // console.log("values:", values);
 
         const allCsvData = await getAllCsvData(values);
-        // console.log("allCsvData:", allCsvData);
-
+        console.log("allCsvData:", allCsvData);
         const tableData = convertTableData(allCsvData);
-        // console.log("tableData", tableData);
 
-        exportExcel(tableData);
-        // setTableData(dataTable);
+        resetData(tableData);
+        // resetData(dataTable);
+
+        // Đóng modal sau khi xử lý thành công
+        $("#form-modal").modal("hide");
     } catch (error) {
         console.log("error:", error);
     }

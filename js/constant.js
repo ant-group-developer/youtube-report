@@ -88,10 +88,10 @@ const EXCEL_COLUMNS = [
         width: 20,
         align: "right",
     },
-    {
-        name: TABLE_COLUMNS.ANT_SHARE,
-        key: TABLE_COLUMNS.ANT_SHARE,
-        width: 20,
-        align: "right",
-    },
+    // {
+    //     name: TABLE_COLUMNS.ANT_SHARE,
+    //     key: TABLE_COLUMNS.ANT_SHARE,
+    //     width: 20,
+    //     align: "right",
+    // },
 ];

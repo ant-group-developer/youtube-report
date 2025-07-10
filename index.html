@@ -5,155 +5,227 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>YouTube Report</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <link rel="stylesheet" href="./libs/bootstrap/5.3.7/css/bootstrap.min.css">
-    <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-table@1.24.1/dist/bootstrap-table.min.css"> -->
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="icon" href="./assets/youtube.png" type="image/x-icon">
 </head>
 
-<body class="mx-auto container">
-    <div class="my-5">
-        <form id="csv-form">
-            <fieldset>
-                <!-- Ads Adjustments Revenue -->
-                <div class="mb-3 row">
-                    <div class="col-12">
-                        <label for="ads-adjustments-revenue" class="form-label fw-medium">Ads Adjustments
-                            Revenue</label>
-                    </div>
-                    <div class="col-12">
-                        <input type="file" accept=".csv" class="form-control" id="ads-adjustments-revenue" required>
-                        <div class="error-message text-danger" id="ads-adjustments-revenue-error"></div>
-                    </div>
-                </div>
+<body class="mx-auto px-5">
+    <div class="my-3">
 
-                <!-- Ads Revenue -->
-                <div class="mb-3 row">
-                    <div class="col-12">
-                        <label for="ads-revenue" class="form-label fw-medium">Ads Revenue</label>
-                    </div>
-                    <div class="col-12">
-                        <input type="file" accept=".csv" class="form-control" id="ads-revenue" required>
-                        <div class="error-message text-danger" id="ads-revenue-error"></div>
-                    </div>
-                </div>
-
-                <!-- Paid Features -->
-                <div class="mb-3 row">
-                    <div class="col-12">
-                        <label for="paid-features" class="form-label fw-medium">Paid Features</label>
-                    </div>
-                    <div class="col-12">
-                        <input type="file" accept=".csv" class="form-control" id="paid-features" required>
-                        <div class="error-message text-danger" id="paid-features-error"></div>
-                    </div>
-                </div>
-
-                <!-- Subscription Revenue Red -->
-                <div class="mb-3 row">
-                    <div class="col-12">
-                        <label for="subscription-revenue-red" class="form-label fw-medium">Subscription Revenue
-                            Red</label>
-                    </div>
-                    <div class="col-12">
-                        <input type="file" accept=".csv" class="form-control" id="subscription-revenue-red" required>
-                        <div class="error-message text-danger" id="subscription-revenue-red-error"></div>
-                    </div>
-                </div>
-
-                <!-- Subscription Revenue Red Music -->
-                <div class="mb-3 row">
-                    <div class="col-12">
-                        <label for="subscription-revenue-red-music" class="form-label fw-medium">Subscription Revenue
-                            Red
-                            Music</label>
-                    </div>
-                    <div class="col-12">
-                        <input type="file" accept=".csv" class="form-control" id="subscription-revenue-red-music"
-                            required>
-                        <div class="error-message text-danger" id="subscription-revenue-red-music-error">
+        <div id="table-wrapper" class="">
+            <div class="sticky-top py-2 bg-white">
+                <div class="d-flex gap-2 justify-content-between">
+                    <div>
+                        <div class="input-group flex-nowrap">
+                            <span class="input-group-text" id="addon-wrapping">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input id="search" class="form-control" type="text" placeholder="Search...">
                         </div>
                     </div>
-                </div>
-
-                <!-- YouTube Shorts Ads -->
-                <div class="mb-3 row">
-                    <div class="col-12">
-                        <label for="youtube-shorts-ads" class="form-label fw-medium">YouTube Shorts Ads</label>
-                    </div>
-                    <div class="col-12">
-                        <input type="file" accept=".csv" class="form-control" id="youtube-shorts-ads" required>
-                        <div class="error-message text-danger" id="youtube-shorts-ads-error"></div>
-                    </div>
-                </div>
-
-                <!-- YouTube Shorts Subscription -->
-                <div class="mb-3 row">
-                    <div class="col-12">
-                        <label for="youtube-shorts-subscription" class="form-label fw-medium">YouTube Shorts
-                            Subscription</label>
-                    </div>
-                    <div class="col-12">
-                        <input type="file" accept=".csv" class="form-control" id="youtube-shorts-subscription" required>
-                        <div class="error-message text-danger" id="youtube-shorts-subscription-error"></div>
+                    <div class="d-flex gap-2">
+                        <button type="button" id="export" class="btn btn-primary">
+                            <i class="bi bi-filetype-xlsx"></i>
+                            Export Excel
+                        </button>
+                        <button type="button" class="btn btn-secondary" data-bs-toggle="modal"
+                            data-bs-target="#form-modal">
+                            <i class="bi bi-database-up"></i>
+                            Import Report Data
+                        </button>
                     </div>
                 </div>
+            </div>
+            <div class="rounded-2 border w-100">
+                <table id="table" class="w-100">
+                    <thead class="sticky-top bg-white">
+                        <tr>
+                            <th data-field="UC" data-width="300" style="width: 15%;" data-width-unit="%">
+                                Channel ID
+                            </th>
+                            <th data-field="Name" data-width="300" style="width: 17%;" data-width-unit="%">
+                                Name
+                            </th>
+                            <th data-field="Ads Adjustments Revenue" data-width="200" style="width: 8.5%;"
+                                data-width-unit="%">
+                                Ads Adjustments Revenue
+                            </th>
+                            <th data-field="Ads Revenue" data-width="200" style="width: 8.5%;" data-width-unit="%">
+                                Ads Revenue
+                            </th>
+                            <th data-field="Paid Features" data-width="200" style="width: 8.5%;" data-width-unit="%">
+                                Paid Features
+                            </th>
+                            <th data-field="Subscription Revenue Red" data-width="200" style="width: 8.5%;"
+                                data-width-unit="%">
+                                Subscription Revenue Red
+                            </th>
+                            <th data-field="Subscription Revenue Red Music" data-width="200" style="width: 8.5%;"
+                                data-width-unit="%">
+                                Subscription Revenue Red Music
+                            </th>
+                            <th data-field="Youtube Shorts Ads" data-width="200" style="width: 8.5%;"
+                                data-width-unit="%">
+                                Youtube Shorts Ads
+                            </th>
+                            <th data-field="Youtube Shorts Subscription" data-width="200" style="width: 8.5%;"
+                                data-width-unit="%">
+                                Youtube Shorts Subscription
+                            </th>
+                            <th data-field="Total Revenue" data-width="200" style="width: 8.5%;" data-width-unit="%">
+                                Total Revenue
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
 
-                <!-- Revenue Share Ratio -->
-                <div class="mb-3 row">
-                    <div class="col-12">
-                        <label for="revenue-share-ratio" class="form-label fw-medium">Revenue Share Ratio (Default:
-                            100)</label>
-                    </div>
-                    <div class="col-12">
-                        <input type="number" min="0" max="100" class="form-control" id="revenue-share-ratio">
-                    </div>
+                    </tbody>
+                </table>
+
+                <div id="no-data-message" class="alert text-center alert-dismissible">
+                    No data available.
                 </div>
 
-                <!-- Submit -->
-                <button id="submit" type="submit" class="btn btn-primary">Export Excel</button>
-            </fieldset>
-        </form>
+            </div>
 
-        <!-- <div id="table-wrapper" class="rounded-2 border mt-5 overflow-hidden invisible">
-            <table id="table" data-height="700" data-virtual-scroll="true" data-show-columns="true">
-                <thead>
-                    <tr>
-                        <th data-field="Channel ID" data-width="300">
-                            Channel ID
-                        </th>
-                        <th data-field="Name" data-width="300">
-                            Name
-                        </th>
-                        <th data-field="Ads Adjustments Revenue" data-width="200">
-                            Ads Adjustments Revenue
-                        </th>
-                        <th data-field="Ads Revenue" data-width="200">
-                            Ads Revenue
-                        </th>
-                        <th data-field="Paid Features" data-width="200">
-                            Paid Features
-                        </th>
-                        <th data-field="Subscription Revenue Red" data-width="200">
-                            Subscription Revenue Red
-                        </th>
-                        <th data-field="Subscription Revenue Red Music" data-width="200">
-                            Subscription Revenue Red Music
-                        </th>
-                        <th data-field="Youtube Shorts Ads" data-width="200">
-                            Youtube Shorts Ads
-                        </th>
-                        <th data-field="Youtube Shorts Subscription" data-width="200">
-                            Youtube Shorts Subscription
-                        </th>
-                        <th data-field="Total Revenue" data-width="200">
-                            Total Revenue
-                        </th>
-                        <th data-field="ANT Share" data-width="200">
-                            ANT Share
-                        </th>
-                    </tr>
-                </thead>
-            </table>
-        </div> -->
+            <nav class="mt-2 d-flex justify-content-between align-content-center">
+                <div id="row-info" class="">
+
+                </div>
+
+                <ul id="pagination" class="pagination">
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" id="previous-page">Previous</a>
+                    </li>
+                    <!-- Pagination links will be inserted here -->
+                    <li class="page-item">
+                        <a class="page-link" href="#" id="next-page">Next</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+
+        <!-- Modal -->
+        <div class="modal fade" id="form-modal" tabindex="-1" aria-labelledby="modal-label" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-scrollable modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h1 class="modal-title fs-5" id="modal-label">Import Report CSV File</h1>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="csv-form">
+                            <fieldset>
+                                <!-- Ads Adjustments Revenue -->
+                                <div class="mb-3 row">
+                                    <div class="col-12">
+                                        <label for="ads-adjustments-revenue" class="form-label fw-medium">Ads
+                                            Adjustments
+                                            Revenue</label>
+                                    </div>
+                                    <div class="col-12">
+                                        <input type="file" accept=".csv" class="form-control"
+                                            id="ads-adjustments-revenue" required>
+                                        <div class="error-message text-danger" id="ads-adjustments-revenue-error"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Ads Revenue -->
+                                <div class="mb-3 row">
+                                    <div class="col-12">
+                                        <label for="ads-revenue" class="form-label fw-medium">Ads Revenue</label>
+                                    </div>
+                                    <div class="col-12">
+                                        <input type="file" accept=".csv" class="form-control" id="ads-revenue" required>
+                                        <div class="error-message text-danger" id="ads-revenue-error"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Paid Features -->
+                                <div class="mb-3 row">
+                                    <div class="col-12">
+                                        <label for="paid-features" class="form-label fw-medium">Paid Features</label>
+                                    </div>
+                                    <div class="col-12">
+                                        <input type="file" accept=".csv" class="form-control" id="paid-features"
+                                            required>
+                                        <div class="error-message text-danger" id="paid-features-error"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Subscription Revenue Red -->
+                                <div class="mb-3 row">
+                                    <div class="col-12">
+                                        <label for="subscription-revenue-red" class="form-label fw-medium">Subscription
+                                            Revenue
+                                            Red</label>
+                                    </div>
+                                    <div class="col-12">
+                                        <input type="file" accept=".csv" class="form-control"
+                                            id="subscription-revenue-red" required>
+                                        <div class="error-message text-danger" id="subscription-revenue-red-error">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Subscription Revenue Red Music -->
+                                <div class="mb-3 row">
+                                    <div class="col-12">
+                                        <label for="subscription-revenue-red-music"
+                                            class="form-label fw-medium">Subscription Revenue
+                                            Red
+                                            Music</label>
+                                    </div>
+                                    <div class="col-12">
+                                        <input type="file" accept=".csv" class="form-control"
+                                            id="subscription-revenue-red-music" required>
+                                        <div class="error-message text-danger"
+                                            id="subscription-revenue-red-music-error">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- YouTube Shorts Ads -->
+                                <div class="mb-3 row">
+                                    <div class="col-12">
+                                        <label for="youtube-shorts-ads" class="form-label fw-medium">YouTube Shorts
+                                            Ads</label>
+                                    </div>
+                                    <div class="col-12">
+                                        <input type="file" accept=".csv" class="form-control" id="youtube-shorts-ads"
+                                            required>
+                                        <div class="error-message text-danger" id="youtube-shorts-ads-error"></div>
+                                    </div>
+                                </div>
+
+                                <!-- YouTube Shorts Subscription -->
+                                <div class="mb-3 row">
+                                    <div class="col-12">
+                                        <label for="youtube-shorts-subscription" class="form-label fw-medium">YouTube
+                                            Shorts
+                                            Subscription</label>
+                                    </div>
+                                    <div class="col-12">
+                                        <input type="file" accept=".csv" class="form-control"
+                                            id="youtube-shorts-subscription" required>
+                                        <div class="error-message text-danger" id="youtube-shorts-subscription-error">
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </fieldset>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <!-- Submit -->
+                        <button id="submit" type="submit" class="btn btn-primary">Submit</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
 
@@ -162,18 +234,22 @@
 
     <!-- BOOTSTRAP -->
     <script src="./libs/bootstrap/5.3.7/js/bootstrap.bundle.min.js"></script>
-    <!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap-table@1.24.1/dist/bootstrap-table.min.js"></script> -->
 
     <!-- EXCELJS -->
     <script src="./libs/exceljs/4.4.0/exceljs.min.js"></script>
 
+    <!-- PapaParse -->
+    <script src="./libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
 
     <!--  -->
 
-    <script src="./data.js"></script>
-    <script src="./utils.js"></script>
-    <script src="./constant.js"></script>
-    <script src="./index.js"></script>
+    <script src="./js/data.js"></script>
+    <script src="./js/utils.js"></script>
+    <script src="./js/constant.js"></script>
+    <script src="./js/table.js"></script>
+    <script src="./js/index.js"></script>
+
 </body>
 
 </html>

@@ -6,7 +6,7 @@ const showLoading = () => {
     const fieldset = $("form#csv-form fieldset");
     fieldset.attr("disabled", true);
 
-    const submitBtn = $("#submit");
+    const submitBtn = getSubmitBtn();
     submitBtn.html(`
         <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
         <span role="status">Loading...</span>   
@@ -17,8 +17,8 @@ const hideLoading = () => {
     const fieldset = $("form#csv-form fieldset");
     fieldset.removeAttr("disabled");
 
-    const submitBtn = $("#submit");
-    submitBtn.html("Export Excel");
+    const submitBtn = getSubmitBtn();
+    submitBtn.html("Submit");
 };
 
 const exportExcel = (data) => {
@@ -114,13 +114,13 @@ const exportExcel = (data) => {
     });
 };
 
-const setTableData = (data) => {
-    if (data.length <= 0) return;
-    const tableWrapper = $("#table-wrapper");
-    tableWrapper.removeClass("invisible");
-    const $table = $("#table");
-    $table.bootstrapTable({ data });
-};
+// const setTableData = (data) => {
+//     if (data.length <= 0) return;
+//     const tableWrapper = $("#table-wrapper");
+//     tableWrapper.removeClass("invisible");
+//     const $table = $("#table");
+//     $table.bootstrapTable({ data });
+// };
 
 const parsedRow = (value) => {
     // This regex will split the string by commas, but it will not split if the comma is inside quotes
@@ -135,51 +135,95 @@ const getCellData = (row, cellIndex) => {
     return row[cellIndex];
 };
 
-const getCsvData = (file, headerKey, headerDetector) => {
+const readFile = (file) => {
     return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-
-        reader.onload = function (event) {
-            const text = event.target.result;
-            // split into rows, then each row by comma
-            const rows = text.trim().split(/\r?\n/);
-            const headerRowIndex = rows.findIndex((value) =>
-                value.includes(headerDetector)
-            );
-
-            if (headerRowIndex === -1) {
-                resolve([]);
-            }
-
-            const data = [];
-
-            const headerRow = parsedRow(rows[headerRowIndex]);
-            const channelIdIndex = headerRow.findIndex(
-                (item) => item === headerKey.id
-            );
-            const channelNameIndex = headerRow.findIndex(
-                (item) => item === headerKey.name
-            );
-            const channelRevIndex = headerRow.findIndex(
-                (item) => item === headerKey.revenue
-            );
-
-            for (i = headerRowIndex + 1; i < rows.length; i++) {
-                const row = parsedRow(rows[i]);
-                const channelId = getCellData(row, channelIdIndex);
-                const channelName = getCellData(row, channelNameIndex);
-                const channelRev = getCellData(row, channelRevIndex);
-
-                data.push({
-                    channelId,
-                    channelName,
-                    channelRev: parseFloat(channelRev),
-                });
-            }
-
-            resolve(data);
-        };
-
-        reader.readAsText(file);
+        const results = [];
+        Papa.parse(file, {
+            skipEmptyLines: true,
+            dynamicTyping: true, // Auto-converts data types like number, boolean
+            step: (row) => {
+                // Process each row here and push to results
+                results.push(row.data); // Store data incrementally
+            },
+            complete: () => {
+                resolve(results); // Resolve after complete processing
+            },
+            error: (err) => {
+                reject(err); // Reject on error
+            },
+        });
     });
 };
+
+const getCsvData = async (file, headerKey, headerDetector) => {
+    const rows = await readFile(file);
+    const headerRowIndex = rows.findIndex((value) =>
+        value.includes(headerDetector)
+    );
+
+    if (headerRowIndex === -1) {
+        return [];
+    }
+
+    const data = [];
+
+    const headerRow = rows[headerRowIndex];
+    const channelIdIndex = headerRow.findIndex((item) => item === headerKey.id);
+    const channelNameIndex = headerRow.findIndex(
+        (item) => item === headerKey.name
+    );
+    const channelRevIndex = headerRow.findIndex(
+        (item) => item === headerKey.revenue
+    );
+
+    for (i = headerRowIndex + 1; i < rows.length; i++) {
+        const row = rows[i];
+        const channelId = getCellData(row, channelIdIndex);
+        const channelName = getCellData(row, channelNameIndex);
+        const channelRev = getCellData(row, channelRevIndex);
+
+        data.push({
+            channelId: ensureUcPrefix(channelId),
+            channelName,
+            channelRev: parseFloat(channelRev),
+        });
+    }
+
+    return data;
+};
+
+const ensureUcPrefix = (channelId) => {
+    // Kiểm tra 2 ký tự đầu, không phân biệt hoa thường
+    if (!channelId.slice(0, 2).toLowerCase().startsWith("uc")) {
+        return "UC" + channelId;
+    }
+    return channelId;
+};
+
+// Validate function to check if the selected file is a CSV
+function validateFileInput(inputId, errorId) {
+    const fileInput = document.getElementById(inputId);
+    const errorMessage = document.getElementById(errorId);
+
+    const file = fileInput.files[0]; // Get the selected file
+    if (!file) {
+        errorMessage.textContent = "Please select a CSV file.";
+        fileInput.classList.add("is-invalid");
+        fileInput.classList.remove("is-valid");
+        return false;
+    }
+
+    const fileType = file.type;
+    if (fileType !== "text/csv" && !file.name.endsWith(".csv")) {
+        errorMessage.textContent = "Please select a valid CSV file.";
+        fileInput.classList.add("is-invalid");
+        fileInput.classList.remove("is-valid");
+        return false;
+    }
+
+    // If file is valid
+    errorMessage.textContent = ""; // Clear error message
+    fileInput.classList.remove("is-invalid");
+    fileInput.classList.add("is-valid");
+    return true;
+}
