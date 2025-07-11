@@ -1,10 +1,18 @@
+html {
+    font-size: 14px;
+    font-family: "Inter", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: <weight>;
+    font-style: normal;
+}
+
 #table {
     border-collapse: separate;
     border-spacing: 0px 0px;
 }
 
 #table thead {
-    top: 54px;
+    top: 48px;
 }
 
 #table th,

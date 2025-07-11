@@ -156,6 +156,10 @@ const readFile = (file) => {
 };
 
 const getCsvData = async (file, headerKey, headerDetector) => {
+    if (!file) {
+        return [];
+    }
+
     const rows = await readFile(file);
     const headerRowIndex = rows.findIndex((value) =>
         value.includes(headerDetector)
@@ -182,9 +186,11 @@ const getCsvData = async (file, headerKey, headerDetector) => {
         const channelName = getCellData(row, channelNameIndex);
         const channelRev = getCellData(row, channelRevIndex);
 
+        const uc = ensureUcPrefix(channelId);
+
         data.push({
-            channelId: ensureUcPrefix(channelId),
-            channelName,
+            channelId: uc,
+            channelName: channelName || uc,
             channelRev: parseFloat(channelRev),
         });
     }
@@ -227,6 +233,30 @@ function validateFileInput(inputId, errorId) {
     fileInput.classList.add("is-valid");
     return true;
 }
+
+const validateCsvFile = (inputId, errorId) => {
+    const fileInput = document.getElementById(inputId);
+    const errorMessage = document.getElementById(errorId);
+
+    const file = fileInput.files[0]; // Get the selected file
+    if (!file) {
+        return false;
+    }
+
+    const fileType = file.type;
+    if (fileType !== "text/csv" && !file.name.endsWith(".csv")) {
+        errorMessage.textContent = "Please select a valid CSV file.";
+        fileInput.classList.add("is-invalid");
+        fileInput.classList.remove("is-valid");
+        return false;
+    }
+
+    // If file is valid
+    errorMessage.textContent = ""; // Clear error message
+    fileInput.classList.remove("is-invalid");
+    fileInput.classList.add("is-valid");
+    return true;
+};
 
 const formatNumber = (number) => {
     return new Intl.NumberFormat("en-US").format(number);

@@ -2,7 +2,8 @@
 $("#csv-form").on("change", 'input[type="file"]', function () {
     const inputId = $(this).attr("id");
     const errorId = inputId + "-error"; // Error element id is based on input id
-    validateFileInput(inputId, errorId);
+    validateCsvFile(inputId, errorId);
+    // validateFileInput(inputId, errorId);
 });
 
 const getFormFiles = () => {
@@ -14,21 +15,21 @@ const getFormFiles = () => {
 
     const validateFile = (fileInputId, errorMessageId) => {
         const file = $("#" + fileInputId)[0].files[0];
-        const errorMessage = $("#" + errorMessageId);
-        const fileInput = $("#" + fileInputId);
+        // const errorMessage = $("#" + errorMessageId);
+        // const fileInput = $("#" + fileInputId);
 
-        if (!file) {
-            errorMessage.text("Please select a csv file.");
-            fileInput.addClass("is-invalid");
-            validateSuccess = false;
-        } else if (!file.name.endsWith(".csv")) {
-            errorMessage.text("Please select a valid csv file.");
-            fileInput.addClass("is-invalid");
-            validateSuccess = false;
-        } else {
-            errorMessage.text("");
-            fileInput.removeClass("is-invalid").addClass("is-valid");
-        }
+        // if (!file) {
+        //     errorMessage.text("Please select a csv file.");
+        //     fileInput.addClass("is-invalid");
+        //     validateSuccess = false;
+        // } else if (!file.name.endsWith(".csv")) {
+        //     errorMessage.text("Please select a valid csv file.");
+        //     fileInput.addClass("is-invalid");
+        //     validateSuccess = false;
+        // } else {
+        //     errorMessage.text("");
+        //     fileInput.removeClass("is-invalid").addClass("is-valid");
+        // }
 
         return file;
     };
