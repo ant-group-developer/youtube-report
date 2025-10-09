@@ -45,7 +45,7 @@
             </div>
 
             <div class="rounded-2 border border-top-0 w-100">
-                <table id="table" class="w-100">
+                <table id="table" class="w-100 table table-striped">
                     <thead class="sticky-top bg-white">
                         <tr>
                             <th data-field="UC" data-width="300" style="width: 15%;" data-width-unit="%">
@@ -88,6 +88,21 @@
                     <tbody id="table-body">
 
                     </tbody>
+
+                    <tfoot class="fw-semibold">
+                        <tr id="table-footer">
+                            <td class="bg-dark-subtle">Total: 3533 channel(s)</td>
+                            <td class="bg-dark-subtle"></td>
+                            <td class="bg-dark-subtle" data-field="Ads Adjustments Revenue">0</td>
+                            <td class="bg-dark-subtle" data-field="Ads Revenue">0</td>
+                            <td class="bg-dark-subtle" data-field="Paid Features">0</td>
+                            <td class="bg-dark-subtle" data-field="Subscription Revenue Red">0</td>
+                            <td class="bg-dark-subtle" data-field="Subscription Revenue Red Music">0</td>
+                            <td class="bg-dark-subtle" data-field="Youtube Shorts Ads">0</td>
+                            <td class="bg-dark-subtle" data-field="Youtube Shorts Subscription">0</td>
+                            <td class="bg-dark-subtle" data-field="Total Revenue">0</td>
+                        </tr>
+                    </tfoot>
                 </table>
 
                 <div id="no-data-message" class="alert text-center alert-dismissible">
@@ -136,6 +151,10 @@
                                             id="ads-adjustments-revenue" required>
                                         <div class="error-message text-danger" id="ads-adjustments-revenue-error"></div>
                                     </div>
+                                    <div class="col-12">
+                                        <small class="text-muted">Ex:
+                                            adjustment_month_video_summary_v1_1_20250701.csv</small>
+                                    </div>
                                 </div>
 
                                 <!-- Ads Revenue -->
@@ -146,6 +165,10 @@
                                     <div class="col-12">
                                         <input type="file" accept=".csv" class="form-control" id="ads-revenue" required>
                                         <div class="error-message text-danger" id="ads-revenue-error"></div>
+                                    </div>
+                                    <div class="col-12">
+                                        <small class="text-muted">Ex:
+                                            ads_partner_revenue_month_video_summary_v1_1_20250701.csv</small>
                                     </div>
                                 </div>
 
@@ -158,6 +181,10 @@
                                         <input type="file" accept=".csv" class="form-control" id="paid-features"
                                             required>
                                         <div class="error-message text-danger" id="paid-features-error"></div>
+                                    </div>
+                                    <div class="col-12">
+                                        <small class="text-muted">Ex:
+                                            YouTube_Tourn_International_AB_Ecommerce_paid_features_M_20250701_20250731_v1-1.csv</small>
                                     </div>
                                 </div>
 
@@ -173,6 +200,10 @@
                                             id="subscription-revenue-red" required>
                                         <div class="error-message text-danger" id="subscription-revenue-red-error">
                                         </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <small class="text-muted">Ex:
+                                            red_month_subscription_video_non_music_v1_1_20250701.csv</small>
                                     </div>
                                 </div>
 
@@ -191,6 +222,10 @@
                                             id="subscription-revenue-red-music-error">
                                         </div>
                                     </div>
+                                    <div class="col-12">
+                                        <small class="text-muted">Ex:
+                                            red_month_subscription_video_v1_1_20250701.csv</small>
+                                    </div>
                                 </div>
 
                                 <!-- YouTube Shorts Ads -->
@@ -203,6 +238,10 @@
                                         <input type="file" accept=".csv" class="form-control" id="youtube-shorts-ads"
                                             required>
                                         <div class="error-message text-danger" id="youtube-shorts-ads-error"></div>
+                                    </div>
+                                    <div class="col-12">
+                                        <small class="text-muted">Ex:
+                                            youtube_shorts_ads_revenue_month_youtube_shorts_ads_video_summary_v1_1_20250701.csv</small>
                                     </div>
                                 </div>
 
@@ -218,6 +257,10 @@
                                             id="youtube-shorts-subscription" required>
                                         <div class="error-message text-danger" id="youtube-shorts-subscription-error">
                                         </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <small class="text-muted">Ex:
+                                            youtube_shorts_subscription_revenue_month_youtube_shorts_subscription_video_summary_v1_0_20250701.csv</small>
                                     </div>
                                 </div>
 

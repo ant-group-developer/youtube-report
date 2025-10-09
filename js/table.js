@@ -220,10 +220,60 @@ const renderPagination = (totalData, currentPage) => {
     }
 };
 
+const renderFooter = (data) => {
+    console.log("data:", data);
+    const footer = $("#table-footer");
+    let totalAdsAdjustmentsRevenue = 0;
+    let totalAdsRevenue = 0;
+    let totalPaidFeatures = 0;
+    let totalSubscriptionRed = 0;
+    let totalSubscriptionRedMusic = 0;
+    let totalYoutubeShortsAds = 0;
+    let totalYoutubeShortsSubscription = 0;
+    let totalRevenue = 0;
+
+    data.forEach((item) => {
+        totalAdsAdjustmentsRevenue +=
+            Number(item[TABLE_COLUMNS.ADS_ADJUSTMENTS_REVENUE]) || 0;
+        totalAdsRevenue += Number(item[TABLE_COLUMNS.ADS_REVENUE]) || 0;
+        totalPaidFeatures += Number(item[TABLE_COLUMNS.PAID_FEATURES]) || 0;
+        totalSubscriptionRed +=
+            Number(item[TABLE_COLUMNS.SUBSCRIPTION_REVENUE_RED]) || 0;
+        totalSubscriptionRedMusic +=
+            Number(item[TABLE_COLUMNS.SUBSCRIPTION_REVENUE_RED_MUSIC]) || 0;
+        totalYoutubeShortsAds +=
+            Number(item[TABLE_COLUMNS.YOUTUBE_SHORTS_ADS]) || 0;
+        totalYoutubeShortsSubscription +=
+            Number(item[TABLE_COLUMNS.YOUTUBE_SHORTS_SUBSCRIPTION]) || 0;
+        totalRevenue += Number(item[TABLE_COLUMNS.TOTAL_REVENUE]) || 0;
+    });
+
+    const footerContent = `
+        <td class="bg-dark-subtle">Total: ${data.length} channel(s)</td>
+        <td class="bg-dark-subtle"></td>
+        <td class="bg-dark-subtle">${formatNumber(
+            totalAdsAdjustmentsRevenue
+        )}</td>
+        <td class="bg-dark-subtle">${formatNumber(totalAdsRevenue)}</td>
+        <td class="bg-dark-subtle">${formatNumber(totalPaidFeatures)}</td>
+        <td class="bg-dark-subtle">${formatNumber(totalSubscriptionRed)}</td>
+        <td class="bg-dark-subtle">${formatNumber(
+            totalSubscriptionRedMusic
+        )}</td>
+        <td class="bg-dark-subtle">${formatNumber(totalYoutubeShortsAds)}</td>
+        <td class="bg-dark-subtle">${formatNumber(
+            totalYoutubeShortsSubscription
+        )}</td>
+        <td class="bg-dark-subtle">${formatNumber(totalRevenue)}</td>
+        `;
+    footer.html(footerContent);
+};
+
 // Function to change page
 const changePage = (page) => {
     const paginatedData = getDataPaginated(filteredData, page); // Use filtered data
     renderTable(paginatedData, $("#search").val()); // Use search term to highlight
+    renderFooter(filteredData); // Update footer with filtered data
     renderPagination(filteredData.length, page);
     currentPage = page;
 };
