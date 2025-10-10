@@ -221,7 +221,6 @@ const renderPagination = (totalData, currentPage) => {
 };
 
 const renderFooter = (data) => {
-    console.log("data:", data);
     const footer = $("#table-footer");
     let totalAdsAdjustmentsRevenue = 0;
     let totalAdsRevenue = 0;

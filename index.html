@@ -36,9 +36,14 @@
                             Export Excel
                         </button>
                         <button type="button" class="btn btn-secondary" data-bs-toggle="modal"
-                            data-bs-target="#form-modal">
+                            data-bs-target="#form-modal-manual">
                             <i class="bi bi-database-up"></i>
-                            Import Report Data
+                            Manual Import Data
+                        </button>
+                        <button type="button" class="btn btn-secondary" data-bs-toggle="modal"
+                            data-bs-target="#form-modal-auto">
+                            <i class="bi bi-database-up"></i>
+                            Auto Import Data
                         </button>
                     </div>
                 </div>
@@ -128,12 +133,50 @@
             </nav>
         </div>
 
-        <!-- Modal -->
-        <div class="modal fade" id="form-modal" tabindex="-1" aria-labelledby="modal-label" aria-hidden="true">
+        <!-- Modal Auto -->
+        <div class="modal fade" id="form-modal-auto" tabindex="-1" aria-labelledby="modal-label" aria-hidden="true">
             <div class="modal-dialog modal-dialog-scrollable modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h1 class="modal-title fs-5" id="modal-label">Import Report CSV File</h1>
+                        <h2 class="modal-title fs-5" id="modal-label">Import Report CSV File Auto</h2>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="csv-form">
+                            <fieldset>
+                                <div class="mb-3 row">
+                                    <div class="col-12">
+                                        <label for="file-list" class="form-label fw-medium">File List</label>
+                                    </div>
+                                    <div class="col-12">
+                                        <input type="file" id="file-list" name="file-list" class="form-control"
+                                            accept=".csv,text/csv" multiple required />
+                                        <div class="error-message text-danger" id="file-list-error"></div>
+                                    </div>
+                                    <div class="col-12">
+                                        <small class="text-muted">The system will automatically detect report file
+                                            types.</small>
+                                    </div>
+                                </div>
+
+                            </fieldset>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <!-- Submit -->
+                        <button id="button-submit-auto" type="submit" class="btn btn-primary">Submit</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Manual -->
+        <div class="modal fade" id="form-modal-manual" tabindex="-1" aria-labelledby="modal-label" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-scrollable modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h1 class="modal-title fs-5" id="modal-label">Import Report CSV File Manually</h1>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
@@ -270,7 +313,7 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                         <!-- Submit -->
-                        <button id="submit" type="submit" class="btn btn-primary">Submit</button>
+                        <button id="button-submit-manual" type="submit" class="btn btn-primary">Submit</button>
                     </div>
                 </div>
             </div>

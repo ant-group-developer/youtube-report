@@ -1,23 +1,23 @@
 const getYouTubeChannelLink = (uc) => `https://www.youtube.com/channel/${uc}`;
 
-const getSubmitBtn = () => $("#submit");
+const getSubmitBtn = (buttonId) => $(`#${buttonId}`);
 
-const showLoading = () => {
+const showLoading = (buttonId) => {
     const fieldset = $("form#csv-form fieldset");
     fieldset.attr("disabled", true);
 
-    const submitBtn = getSubmitBtn();
+    const submitBtn = getSubmitBtn(buttonId);
     submitBtn.html(`
         <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
         <span role="status">Loading...</span>   
     `);
 };
 
-const hideLoading = () => {
+const hideLoading = (buttonId) => {
     const fieldset = $("form#csv-form fieldset");
     fieldset.removeAttr("disabled");
 
-    const submitBtn = getSubmitBtn();
+    const submitBtn = getSubmitBtn(buttonId);
     submitBtn.html("Submit");
 };
 

@@ -6,7 +6,7 @@ $("#csv-form").on("change", 'input[type="file"]', function () {
     // validateFileInput(inputId, errorId);
 });
 
-const getFormFiles = () => {
+const getFormManualFiles = () => {
     // Reset lỗi trước khi kiểm tra
     $(".error-message").text("");
     $("input[type='file']").removeClass("is-invalid is-valid");
@@ -15,8 +15,14 @@ const getFormFiles = () => {
 
     const validateFile = (fileInputId, errorMessageId) => {
         const file = $("#" + fileInputId)[0].files[0];
-        // const errorMessage = $("#" + errorMessageId);
-        // const fileInput = $("#" + fileInputId);
+        const errorMessage = $("#" + errorMessageId);
+        const fileInput = $("#" + fileInputId);
+
+        if (file && !file.name.endsWith(".csv")) {
+            errorMessage.text("Please select a valid csv file.");
+            fileInput.addClass("is-invalid");
+            validateSuccess = false;
+        }
 
         // if (!file) {
         //     errorMessage.text("Please select a csv file.");
@@ -273,15 +279,15 @@ const convertTableData = (allCsvData) => {
     );
 };
 
-const onSubmit = async (e) => {
+const onSubmitManual = async (e) => {
     e.preventDefault(); // Prevent the form from submitting
 
-    showLoading();
+    showLoading(BUTTON_SUBMIT_MANUAL_ID);
 
     try {
-        const values = getFormFiles();
+        const values = getFormManualFiles();
         if (!values) {
-            hideLoading();
+            hideLoading(BUTTON_SUBMIT_MANUAL_ID);
             return;
         }
 
@@ -293,13 +299,97 @@ const onSubmit = async (e) => {
         // resetData(dataTable);
 
         // Đóng modal sau khi xử lý thành công
-        $("#form-modal").modal("hide");
+        $(`#${MODAL_MANUAL_ID}`).modal("hide");
     } catch (error) {
         console.log("error:", error);
     }
 
-    hideLoading();
+    hideLoading(BUTTON_SUBMIT_MANUAL_ID);
 };
 
-const submitBtn = getSubmitBtn();
-submitBtn.on("click", onSubmit);
+const submitManualBtn = getSubmitBtn(BUTTON_SUBMIT_MANUAL_ID);
+submitManualBtn.on("click", onSubmitManual);
+
+// Auto Submit
+const getFileByNameTemplate = (fileList, nameTemplate) => {
+    return fileList.find((file) =>
+        nameTemplate.some((template) => file.name.includes(template))
+    );
+};
+
+const getFormAutoFiles = () => {
+    const files = $("#file-list")[0].files;
+    const fileList = Array.from(files);
+    if (fileList.length === 0) return;
+
+    const adsAdjustmentsRevenueFile = getFileByNameTemplate(
+        fileList,
+        FILE_NAME_TEMPLATES.ADS_ADJUSTMENTS_REVENUE
+    );
+    const adsRevenueFile = getFileByNameTemplate(
+        fileList,
+        FILE_NAME_TEMPLATES.ADS_REVENUE
+    );
+    const paidFeaturesFile = getFileByNameTemplate(
+        fileList,
+        FILE_NAME_TEMPLATES.PAID_FEATURES
+    );
+    const subscriptionRevenueRedFile = getFileByNameTemplate(
+        fileList,
+        FILE_NAME_TEMPLATES.SUBSCRIPTION_REVENUE_RED
+    );
+    const subscriptionRevenueRedMusicFile = getFileByNameTemplate(
+        fileList,
+        FILE_NAME_TEMPLATES.SUBSCRIPTION_REVENUE_RED_MUSIC
+    );
+    const youtubeShortsAdsFile = getFileByNameTemplate(
+        fileList,
+        FILE_NAME_TEMPLATES.YOUTUBE_SHORTS_ADS
+    );
+    const youtubeShortsSubscriptionFile = getFileByNameTemplate(
+        fileList,
+        FILE_NAME_TEMPLATES.YOUTUBE_SHORTS_SUBSCRIPTION
+    );
+
+    return {
+        adsAdjustmentsRevenueFile,
+        adsRevenueFile,
+        paidFeaturesFile,
+        subscriptionRevenueRedFile,
+        subscriptionRevenueRedMusicFile,
+        youtubeShortsAdsFile,
+        youtubeShortsSubscriptionFile,
+    };
+};
+
+const onSubmitAuto = async (e) => {
+    e.preventDefault(); // Prevent the form from submitting
+
+    showLoading(BUTTON_SUBMIT_AUTO_ID);
+
+    try {
+        const values = getFormAutoFiles();
+        console.log("values:", values);
+        if (!values) {
+            hideLoading(BUTTON_SUBMIT_AUTO_ID);
+            return;
+        }
+
+        const allCsvData = await getAllCsvData(values);
+        console.log("allCsvData:", allCsvData);
+        const tableData = convertTableData(allCsvData);
+
+        resetData(tableData);
+        // resetData(dataTable);
+
+        // Đóng modal sau khi xử lý thành công
+        $(`#${MODAL_AUTO_ID}`).modal("hide");
+    } catch (error) {
+        console.log("error:", error);
+    }
+
+    hideLoading(BUTTON_SUBMIT_AUTO_ID);
+};
+
+const submitAutoBtn = getSubmitBtn(BUTTON_SUBMIT_AUTO_ID);
+submitAutoBtn.on("click", onSubmitAuto);

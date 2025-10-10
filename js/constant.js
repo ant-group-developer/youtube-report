@@ -1,3 +1,37 @@
+const BUTTON_SUBMIT_MANUAL_ID = "button-submit-manual";
+const BUTTON_SUBMIT_AUTO_ID = "button-submit-auto";
+
+const MODAL_MANUAL_ID = "form-modal-manual";
+const MODAL_AUTO_ID = "form-modal-auto";
+
+const FILE_NAME_TEMPLATES = {
+    ADS_ADJUSTMENTS_REVENUE: [
+        "adjustment_month_video_summary_",
+        "_ADJ_video_summary_",
+    ],
+    ADS_REVENUE: [
+        "ads_partner_revenue_month_video_summary_",
+        "_video_summary_",
+    ],
+    PAID_FEATURES: ["paid_features_M_"],
+    SUBSCRIPTION_REVENUE_RED: [
+        "red_month_subscription_video_non_music_v",
+        "red_rawdata_video_",
+    ],
+    SUBSCRIPTION_REVENUE_RED_MUSIC: [
+        "red_month_subscription_video_v",
+        "red_music_rawdata_video_",
+    ],
+    YOUTUBE_SHORTS_ADS: [
+        "youtube_shorts_ads_revenue_month_youtube_shorts_ads_video_summary_",
+        "monthly_shorts_non_music_ads_video_summary_",
+    ],
+    YOUTUBE_SHORTS_SUBSCRIPTION: [
+        "youtube_shorts_subscription_revenue_month_youtube_shorts_subscription_video_summary_",
+        "monthly_shorts_non_music_subscription_video_summary_",
+    ],
+};
+
 const CSV_COLUMNS = {
     CHANNEL_ID: "Channel ID",
     CHANNEL_DISPLAY_NAME: "Channel Display Name",
