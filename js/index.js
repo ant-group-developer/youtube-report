@@ -311,45 +311,34 @@ const submitManualBtn = getSubmitBtn(BUTTON_SUBMIT_MANUAL_ID);
 submitManualBtn.on("click", onSubmitManual);
 
 // Auto Submit
-const getFileByNameTemplate = (fileList, nameTemplate) => {
-    return fileList.find((file) =>
-        nameTemplate.some((template) => file.name.includes(template))
-    );
-};
-
 const getFormAutoFiles = () => {
-    const files = $("#file-list")[0].files;
-    const fileList = Array.from(files);
-    if (fileList.length === 0) return;
+    const input = $("#file-list")[0];
+    if (!input || !input.files || input.files.length === 0) return;
 
-    const adsAdjustmentsRevenueFile = getFileByNameTemplate(
+    const fileList = Array.from(input.files);
+
+    const youtubeShortsSubscriptionFile = pickBestByRule(
         fileList,
-        FILE_NAME_TEMPLATES.ADS_ADJUSTMENTS_REVENUE
+        RULES.YOUTUBE_SHORTS_SUBSCRIPTION
     );
-    const adsRevenueFile = getFileByNameTemplate(
+    const youtubeShortsAdsFile = pickBestByRule(
         fileList,
-        FILE_NAME_TEMPLATES.ADS_REVENUE
+        RULES.YOUTUBE_SHORTS_ADS
     );
-    const paidFeaturesFile = getFileByNameTemplate(
+    const subscriptionRevenueRedMusicFile = pickBestByRule(
         fileList,
-        FILE_NAME_TEMPLATES.PAID_FEATURES
+        RULES.SUBSCRIPTION_REVENUE_RED_MUSIC
     );
-    const subscriptionRevenueRedFile = getFileByNameTemplate(
+    const subscriptionRevenueRedFile = pickBestByRule(
         fileList,
-        FILE_NAME_TEMPLATES.SUBSCRIPTION_REVENUE_RED
+        RULES.SUBSCRIPTION_REVENUE_RED
     );
-    const subscriptionRevenueRedMusicFile = getFileByNameTemplate(
+    const paidFeaturesFile = pickBestByRule(fileList, RULES.PAID_FEATURES);
+    const adsAdjustmentsRevenueFile = pickBestByRule(
         fileList,
-        FILE_NAME_TEMPLATES.SUBSCRIPTION_REVENUE_RED_MUSIC
+        RULES.ADS_ADJUSTMENTS_REVENUE
     );
-    const youtubeShortsAdsFile = getFileByNameTemplate(
-        fileList,
-        FILE_NAME_TEMPLATES.YOUTUBE_SHORTS_ADS
-    );
-    const youtubeShortsSubscriptionFile = getFileByNameTemplate(
-        fileList,
-        FILE_NAME_TEMPLATES.YOUTUBE_SHORTS_SUBSCRIPTION
-    );
+    const adsRevenueFile = pickBestByRule(fileList, RULES.ADS_REVENUE);
 
     return {
         adsAdjustmentsRevenueFile,
@@ -369,7 +358,7 @@ const onSubmitAuto = async (e) => {
 
     try {
         const values = getFormAutoFiles();
-        console.log("values:", values);
+        console.log("File list:", values);
         if (!values) {
             hideLoading(BUTTON_SUBMIT_AUTO_ID);
             return;

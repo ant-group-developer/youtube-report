@@ -261,3 +261,54 @@ const validateCsvFile = (inputId, errorId) => {
 const formatNumber = (number) => {
     return new Intl.NumberFormat("en-US").format(number);
 };
+
+// ---- Helpers ---------------------------------------------------------------
+const parseVersionWeight = (name) => {
+    // v1-1 | v1_1 | v2 | v10-0 ...
+    const s = name.toLowerCase();
+    const m = s.match(/v(\d+)[-_](\d+)/) || s.match(/v(\d+)/);
+    if (!m) return -1; // không thấy version => ưu tiên thấp
+    const major = parseInt(m[1], 10);
+    const minor = m[2] ? parseInt(m[2], 10) : 0;
+    return major * 100 + minor; // v1-1 = 101 > v1-0 = 100
+};
+
+const parseNewestDateKey = (name) => {
+    // Bắt mọi cụm YYYYMMDD và lấy lớn nhất (ví dụ: 20250531, 20250701)
+    const dates = name.match(/20\d{6}/g);
+    if (!dates) return -1;
+    return Math.max(...dates.map((d) => parseInt(d, 10)));
+};
+
+const matchesRule = (name, rule) => {
+    const s = name.toLowerCase();
+    if (rule.forbidden?.some((re) => re.test(s))) return false;
+
+    if (rule.requiredAll && !rule.requiredAll.every((re) => re.test(s))) {
+        return false;
+    }
+    if (rule.requiredAny && !rule.requiredAny.some((re) => re.test(s))) {
+        return false;
+    }
+    return true;
+};
+
+const pickBestByRule = (fileList, rule) => {
+    const candidates = fileList.filter((f) => matchesRule(f.name, rule));
+    if (candidates.length === 0) return undefined;
+
+    // Ưu tiên: version > ngày > tên (ổn định)
+    candidates.sort((a, b) => {
+        const va = parseVersionWeight(a.name);
+        const vb = parseVersionWeight(b.name);
+        if (vb !== va) return vb - va;
+
+        const da = parseNewestDateKey(a.name);
+        const db = parseNewestDateKey(b.name);
+        if (db !== da) return db - da;
+
+        return a.name.localeCompare(b.name); // tie-break
+    });
+
+    return candidates[0];
+};
