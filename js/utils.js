@@ -156,11 +156,13 @@ const readFile = (file) => {
 };
 
 const getCsvData = async (file, headerKey, headerDetector) => {
+    console.log("file:", file);
     if (!file) {
         return [];
     }
 
     const rows = await readFile(file);
+    console.log("rows:", rows);
     const headerRowIndex = rows.findIndex((value) =>
         value.includes(headerDetector)
     );
@@ -173,12 +175,14 @@ const getCsvData = async (file, headerKey, headerDetector) => {
 
     const headerRow = rows[headerRowIndex];
     const channelIdIndex = headerRow.findIndex((item) => item === headerKey.id);
+    console.log("channelIdIndex:", channelIdIndex);
     const channelNameIndex = headerRow.findIndex(
         (item) => item === headerKey.name
     );
     const channelRevIndex = headerRow.findIndex(
         (item) => item === headerKey.revenue
     );
+
     const deductionAmountIndex = headerRow.findIndex(
         (item) => item === headerKey.deductionAmount
     );
@@ -186,22 +190,46 @@ const getCsvData = async (file, headerKey, headerDetector) => {
         (item) => item === headerKey.adjustmentType
     );
 
+    const usSourcedRevenueIndex = headerRow.findIndex(
+        (item) => item === headerKey.usSourcedRevenue
+    );
+    const taxWithholdingRateIndex = headerRow.findIndex(
+        (item) => item === headerKey.taxWithholdingRate
+    );
+    const taxWithheldAmountIndex = headerRow.findIndex(
+        (item) => item === headerKey.taxWithheldAmount
+    );
+
     for (i = headerRowIndex + 1; i < rows.length; i++) {
         const row = rows[i];
-        const channelId = getCellData(row, channelIdIndex);
+        const channelId = getCellData(row, channelIdIndex) || "";
         const channelName = getCellData(row, channelNameIndex);
         const channelRev = getCellData(row, channelRevIndex);
         const channelDeductionAmount = getCellData(row, deductionAmountIndex);
         const channelAdjustmentType = getCellData(row, adjustmentTypeIndex);
+        const channelUsSourcedRevenue = getCellData(row, usSourcedRevenueIndex);
+        const channelTaxWithholdingRate = getCellData(
+            row,
+            taxWithholdingRateIndex
+        );
+        const channelTaxWithheldAmount = getCellData(
+            row,
+            taxWithheldAmountIndex
+        );
 
         const uc = ensureUcPrefix(channelId);
 
         data.push({
             channelId: uc,
             channelName: channelName || uc,
-            channelRev: parseFloat(channelRev),
-            channelDeductionAmount,
+            channelRev: parseFloat(channelRev || "0"),
+            channelDeductionAmount: parseFloat(channelDeductionAmount || "0"),
             channelAdjustmentType,
+            channelUsSourcedRevenue: parseFloat(channelUsSourcedRevenue || "0"),
+            channelTaxWithheldAmount: parseFloat(
+                channelTaxWithheldAmount || "0"
+            ),
+            channelTaxWithholdingRate,
         });
     }
 

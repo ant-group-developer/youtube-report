@@ -19,6 +19,7 @@ const highlightText = (text, searchTerm) => {
 };
 
 const renderTable = (data, searchTerm = "") => {
+    console.log("data:", data);
     const tableBody = $("#table-body");
 
     // Kiểm tra nếu không có dữ liệu sau khi lọc
@@ -41,82 +42,71 @@ const renderTable = (data, searchTerm = "") => {
             item[TABLE_COLUMNS.CHANNEL_NAME],
             searchTerm
         );
-        const revenue = formatNumber(
-            item[TABLE_COLUMNS.ADS_ADJUSTMENTS_REVENUE],
+        const usRevenue = formatNumber(
+            item[TABLE_COLUMNS.US_REVENUE],
             searchTerm
         );
-        const adsRevenue = formatNumber(
-            item[TABLE_COLUMNS.ADS_REVENUE],
+        const taxWithholdingRate = formatNumber(
+            item[TABLE_COLUMNS.TAX_WITHHOLDING_RATE],
             searchTerm
         );
-        const paidFeatures = formatNumber(
-            item[TABLE_COLUMNS.PAID_FEATURES],
+        const taxWithHeldAmount = formatNumber(
+            item[TABLE_COLUMNS.TAX_WITHHELD_AMOUNT],
             searchTerm
         );
-        const subscriptionRed = formatNumber(
-            item[TABLE_COLUMNS.SUBSCRIPTION_REVENUE_RED],
-            searchTerm
-        );
-        const subscriptionRedMusic = formatNumber(
-            item[TABLE_COLUMNS.SUBSCRIPTION_REVENUE_RED_MUSIC],
-            searchTerm
-        );
-        const youtubeShortsAds = formatNumber(
-            item[TABLE_COLUMNS.YOUTUBE_SHORTS_ADS],
-            searchTerm
-        );
-        const youtubeShortsSubscription = formatNumber(
-            item[TABLE_COLUMNS.YOUTUBE_SHORTS_SUBSCRIPTION],
-            searchTerm
-        );
+        const revenue = formatNumber(item[TABLE_COLUMNS.REVENUE], searchTerm);
         const deductionAmount = formatNumber(
-            item[TABLE_COLUMNS.DEDUCTION],
+            item[TABLE_COLUMNS.DEDUCTION_AMOUNT],
             searchTerm
         );
-        const note = item[TABLE_COLUMNS.NOTE] || "";
         const totalRevenue = formatNumber(
             item[TABLE_COLUMNS.TOTAL_REVENUE],
             searchTerm
         );
+        const note = item[TABLE_COLUMNS.NOTE] || "";
+
+        let className = "";
+
+        switch (note) {
+            case ADJUSTMENT_TYPES.MONETIZATION_DISABLED.VALUE:
+                className = ADJUSTMENT_TYPES.MONETIZATION_DISABLED.CLASS_NAME;
+                break;
+            case ADJUSTMENT_TYPES.CREDIT_APPEAL.VALUE:
+                className = ADJUSTMENT_TYPES.CREDIT_APPEAL.CLASS_NAME;
+                break;
+            default:
+                className = "";
+        }
 
         return `<tr>
-                <td data-field="Channel ID" data-width="300" title="${uc}">
+                <td data-field="Channel ID" title="${uc}" class="${className}">
                     ${highlightText(uc, searchTerm)}
                 </td>
-                <td data-field="Name" data-width="300">
+                <td data-field="Name" class="${className}">
                     <a href="${link}" target="_blank">
                         ${name}
                     </a>
                 </td>
-                <td data-field="Ads Adjustments Revenue" data-width="200">
+                <td data-field="US Revenue" class="${className}">
+                    ${usRevenue}
+                </td>
+                <td data-field="Tax Withholding Rate" class="${className}">
+                    ${taxWithholdingRate}
+                </td>
+                <td data-field="Tax Withheld Amount" class="${className}">
+                    ${taxWithHeldAmount}
+                </td>
+                <td data-field="Revenue" class="${className}">
                     ${revenue}
                 </td>
-                <td data-field="Ads Revenue" data-width="200">
-                    ${adsRevenue}
-                </td>
-                <td data-field="Paid Features" data-width="200">
-                    ${paidFeatures}
-                </td>
-                <td data-field="Subscription Revenue Red" data-width="200">
-                    ${subscriptionRed}
-                </td>
-                <td
-                    data-field="Subscription Revenue Red Music"
-                    data-width="200"
-                >
-                    ${subscriptionRedMusic}
-                </td>
-                <td data-field="Youtube Shorts Ads" data-width="200">
-                    ${youtubeShortsAds}
-                </td>
-                <td data-field="Youtube Shorts Subscription" data-width="200">
-                    ${youtubeShortsSubscription}
-                </td>
-                <td data-field="Deduction Amount" data-width="200" title="${note}">
+                <td data-field="Deduction Amount" title="${note}" class="${className}">
                     ${deductionAmount}
                 </td>
-                <td data-field="Total Revenue" data-width="200">
+                <td data-field="Total Revenue" class="${className}">
                     ${totalRevenue}
+                </td>
+                <td data-field="Note" class="${className}">
+                    ${note}
                 </td>
             </tr>`;
     });
@@ -230,51 +220,35 @@ const renderPagination = (totalData, currentPage) => {
 
 const renderFooter = (data) => {
     const footer = $("#table-footer");
-    let totalAdsAdjustmentsRevenue = 0;
-    let totalAdsRevenue = 0;
-    let totalPaidFeatures = 0;
-    let totalSubscriptionRed = 0;
-    let totalSubscriptionRedMusic = 0;
-    let totalYoutubeShortsAds = 0;
-    let totalYoutubeShortsSubscription = 0;
-    let deductionAmount = 0;
+    let totalUsRevenue = 0;
+    let totalTaxWithheldAmount = 0;
     let totalRevenue = 0;
+    let totalDeductionAmount = 0;
+    let totalFinalRevenue = 0;
 
     data.forEach((item) => {
-        totalAdsAdjustmentsRevenue +=
-            Number(item[TABLE_COLUMNS.ADS_ADJUSTMENTS_REVENUE]) || 0;
-        totalAdsRevenue += Number(item[TABLE_COLUMNS.ADS_REVENUE]) || 0;
-        totalPaidFeatures += Number(item[TABLE_COLUMNS.PAID_FEATURES]) || 0;
-        totalSubscriptionRed +=
-            Number(item[TABLE_COLUMNS.SUBSCRIPTION_REVENUE_RED]) || 0;
-        totalSubscriptionRedMusic +=
-            Number(item[TABLE_COLUMNS.SUBSCRIPTION_REVENUE_RED_MUSIC]) || 0;
-        totalYoutubeShortsAds +=
-            Number(item[TABLE_COLUMNS.YOUTUBE_SHORTS_ADS]) || 0;
-        totalYoutubeShortsSubscription +=
-            Number(item[TABLE_COLUMNS.YOUTUBE_SHORTS_SUBSCRIPTION]) || 0;
-        deductionAmount += Number(item[TABLE_COLUMNS.DEDUCTION]) || 0;
-        totalRevenue += Number(item[TABLE_COLUMNS.TOTAL_REVENUE]) || 0;
+        totalUsRevenue += Number(item[TABLE_COLUMNS.US_REVENUE]) || 0;
+        totalTaxWithheldAmount +=
+            Number(item[TABLE_COLUMNS.TAX_WITHHELD_AMOUNT]) || 0;
+        totalTaxWithheldAmount +=
+            Number(item[TABLE_COLUMNS.TAX_WITHHELD_AMOUNT]) || 0;
+        totalTaxWithheldAmount +=
+            Number(item[TABLE_COLUMNS.TAX_WITHHELD_AMOUNT]) || 0;
+        totalDeductionAmount +=
+            Number(item[TABLE_COLUMNS.DEDUCTION_AMOUNT]) || 0;
+        totalFinalRevenue += Number(item[TABLE_COLUMNS.TOTAL_REVENUE]) || 0;
     });
 
     const footerContent = `
         <td class="bg-dark-subtle">Total: ${data.length} channel(s)</td>
         <td class="bg-dark-subtle"></td>
-        <td class="bg-dark-subtle">${formatNumber(
-            totalAdsAdjustmentsRevenue
-        )}</td>
-        <td class="bg-dark-subtle">${formatNumber(totalAdsRevenue)}</td>
-        <td class="bg-dark-subtle">${formatNumber(totalPaidFeatures)}</td>
-        <td class="bg-dark-subtle">${formatNumber(totalSubscriptionRed)}</td>
-        <td class="bg-dark-subtle">${formatNumber(
-            totalSubscriptionRedMusic
-        )}</td>
-        <td class="bg-dark-subtle">${formatNumber(totalYoutubeShortsAds)}</td>
-        <td class="bg-dark-subtle">${formatNumber(
-            totalYoutubeShortsSubscription
-        )}</td>
-        <td class="bg-dark-subtle">${formatNumber(deductionAmount)}</td>
+        <td class="bg-dark-subtle">${formatNumber(totalUsRevenue)}</td>
+        <td class="bg-dark-subtle"></td>
+        <td class="bg-dark-subtle">${formatNumber(totalTaxWithheldAmount)}</td>
         <td class="bg-dark-subtle">${formatNumber(totalRevenue)}</td>
+        <td class="bg-dark-subtle">${formatNumber(totalDeductionAmount)}</td>
+        <td class="bg-dark-subtle">${formatNumber(totalFinalRevenue)}</td>
+        <td class="bg-dark-subtle"></td>
         `;
     footer.html(footerContent);
 };

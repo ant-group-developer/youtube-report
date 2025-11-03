@@ -162,6 +162,17 @@ const getAllCsvData = async (values) => {
         CSV_COLUMNS.CHANNEL_ID
     );
 
+    const dataAffiliatePaymentSummary = await getCsvData(
+        values.affiliatePaymentSummaryFile,
+        {
+            id: CSV_COLUMNS.CHANNEL_ID,
+            usSourcedRevenue: CSV_COLUMNS.US_SOURECED_REVENUE,
+            taxWithholdingRate: CSV_COLUMNS.TAX_WITHHOLDING_RATE,
+            taxWithheldAmount: CSV_COLUMNS.TAX_WITHHELD_AMOUNT,
+        },
+        CSV_COLUMNS.CHANNEL_ID
+    );
+
     return {
         dataAdsAdjustmentsRevenue,
         dataAdsRevenue,
@@ -171,6 +182,7 @@ const getAllCsvData = async (values) => {
         dataYoutubeShortsAds,
         dataYoutubeShortsSubscription,
         dataCustomAdjustments,
+        dataAffiliatePaymentSummary,
     };
 };
 
@@ -178,14 +190,11 @@ const getNewCellData = (channelId, channelName) => {
     return {
         [TABLE_COLUMNS.CHANNEL_ID]: channelId,
         [TABLE_COLUMNS.CHANNEL_NAME]: channelName,
-        [TABLE_COLUMNS.ADS_ADJUSTMENTS_REVENUE]: 0,
-        [TABLE_COLUMNS.ADS_REVENUE]: 0,
-        [TABLE_COLUMNS.PAID_FEATURES]: 0,
-        [TABLE_COLUMNS.SUBSCRIPTION_REVENUE_RED]: 0,
-        [TABLE_COLUMNS.SUBSCRIPTION_REVENUE_RED_MUSIC]: 0,
-        [TABLE_COLUMNS.YOUTUBE_SHORTS_ADS]: 0,
-        [TABLE_COLUMNS.YOUTUBE_SHORTS_SUBSCRIPTION]: 0,
-        [TABLE_COLUMNS.DEDUCTION]: 0,
+        [TABLE_COLUMNS.US_REVENUE]: 0,
+        [TABLE_COLUMNS.TAX_WITHHOLDING_RATE]: 0,
+        [TABLE_COLUMNS.TAX_WITHHELD_AMOUNT]: 0,
+        [TABLE_COLUMNS.REVENUE]: 0,
+        [TABLE_COLUMNS.DEDUCTION_AMOUNT]: 0,
         [TABLE_COLUMNS.TOTAL_REVENUE]: 0,
         [TABLE_COLUMNS.NOTE]: "",
     };
@@ -207,12 +216,11 @@ const processRevenueData = (data, revenueColumn, tableData) => {
     });
 };
 
-const processDeductionData = (data, revenueColumn, tableData) => {
+const processDeductionData = (data, tableData) => {
     data.forEach((item) => {
         const { channelId, channelAdjustmentType, channelDeductionAmount } =
             item;
         let value = tableData.get(channelId);
-
         let deductionAmount = channelDeductionAmount;
 
         if (!value) {
@@ -230,7 +238,27 @@ const processDeductionData = (data, revenueColumn, tableData) => {
         // }
 
         value[TABLE_COLUMNS.NOTE] = channelAdjustmentType;
-        value[revenueColumn] += deductionAmount;
+        value[TABLE_COLUMNS.DEDUCTION_AMOUNT] += deductionAmount;
+    });
+};
+
+const processAffiliatePaymentData = (data, tableData) => {
+    data.forEach((item) => {
+        const {
+            channelId,
+            channelUsSourcedRevenue,
+            channelTaxWithholdingRate,
+            channelTaxWithheldAmount,
+        } = item;
+        let value = tableData.get(channelId);
+
+        if (!value) {
+            value = getNewCellData(channelId, "");
+        }
+
+        value[TABLE_COLUMNS.US_REVENUE] += channelUsSourcedRevenue;
+        value[TABLE_COLUMNS.TAX_WITHHOLDING_RATE] = channelTaxWithholdingRate;
+        value[TABLE_COLUMNS.TAX_WITHHELD_AMOUNT] += channelTaxWithheldAmount;
     });
 };
 
@@ -244,6 +272,7 @@ const convertTableData = (allCsvData) => {
         dataYoutubeShortsAds,
         dataYoutubeShortsSubscription,
         dataCustomAdjustments,
+        dataAffiliatePaymentSummary,
     } = allCsvData;
 
     const tableData = new Map();
@@ -256,67 +285,49 @@ const convertTableData = (allCsvData) => {
     );
 
     // Ads Revenue
-    processRevenueData(dataAdsRevenue, TABLE_COLUMNS.ADS_REVENUE, tableData);
+    processRevenueData(dataAdsRevenue, TABLE_COLUMNS.REVENUE, tableData);
 
     // Paid Features
-    processRevenueData(
-        dataPaidFeatures,
-        TABLE_COLUMNS.PAID_FEATURES,
-        tableData
-    );
+    processRevenueData(dataPaidFeatures, TABLE_COLUMNS.REVENUE, tableData);
 
     // Subscription Revenue Red
     processRevenueData(
         dataSubscriptionRevenueRed,
-        TABLE_COLUMNS.SUBSCRIPTION_REVENUE_RED,
+        TABLE_COLUMNS.REVENUE,
         tableData
     );
 
     // Subscription Revenue Red Music
     processRevenueData(
         dataSubscriptionRevenueRedMusic,
-        TABLE_COLUMNS.SUBSCRIPTION_REVENUE_RED_MUSIC,
+        TABLE_COLUMNS.REVENUE,
         tableData
     );
 
     // YouTube Shorts Ads
-    processRevenueData(
-        dataYoutubeShortsAds,
-        TABLE_COLUMNS.YOUTUBE_SHORTS_ADS,
-        tableData
-    );
+    processRevenueData(dataYoutubeShortsAds, TABLE_COLUMNS.REVENUE, tableData);
 
     // YouTube Shorts Subscription
     processRevenueData(
         dataYoutubeShortsSubscription,
-        TABLE_COLUMNS.YOUTUBE_SHORTS_SUBSCRIPTION,
+        TABLE_COLUMNS.REVENUE,
         tableData
     );
 
     // Custom Adjustments - Deduction Amount
-    processDeductionData(
-        dataCustomAdjustments,
-        TABLE_COLUMNS.DEDUCTION,
-        tableData
-    );
+    processDeductionData(dataCustomAdjustments, tableData);
+
+    // Affiliate Payment Summary
+    processAffiliatePaymentData(dataAffiliatePaymentSummary, tableData);
 
     const result = Array.from(tableData, ([_, value]) => {
-        value[TABLE_COLUMNS.ADS_ADJUSTMENTS_REVENUE] =
-            value[TABLE_COLUMNS.ADS_ADJUSTMENTS_REVENUE].toFixed(2);
-        value[TABLE_COLUMNS.ADS_REVENUE] =
-            value[TABLE_COLUMNS.ADS_REVENUE].toFixed(2);
-        value[TABLE_COLUMNS.PAID_FEATURES] =
-            value[TABLE_COLUMNS.PAID_FEATURES].toFixed(2);
-        value[TABLE_COLUMNS.SUBSCRIPTION_REVENUE_RED] =
-            value[TABLE_COLUMNS.SUBSCRIPTION_REVENUE_RED].toFixed(2);
-        value[TABLE_COLUMNS.SUBSCRIPTION_REVENUE_RED_MUSIC] =
-            value[TABLE_COLUMNS.SUBSCRIPTION_REVENUE_RED_MUSIC].toFixed(2);
-        value[TABLE_COLUMNS.YOUTUBE_SHORTS_ADS] =
-            value[TABLE_COLUMNS.YOUTUBE_SHORTS_ADS].toFixed(2);
-        value[TABLE_COLUMNS.YOUTUBE_SHORTS_SUBSCRIPTION] =
-            value[TABLE_COLUMNS.YOUTUBE_SHORTS_SUBSCRIPTION].toFixed(2);
-        value[TABLE_COLUMNS.DEDUCTION] =
-            value[TABLE_COLUMNS.DEDUCTION].toFixed(2);
+        value[TABLE_COLUMNS.US_REVENUE] =
+            value[TABLE_COLUMNS.US_REVENUE].toFixed(2);
+        value[TABLE_COLUMNS.TAX_WITHHELD_AMOUNT] =
+            value[TABLE_COLUMNS.TAX_WITHHELD_AMOUNT].toFixed(2);
+        value[TABLE_COLUMNS.REVENUE] = value[TABLE_COLUMNS.REVENUE].toFixed(2);
+        value[TABLE_COLUMNS.DEDUCTION_AMOUNT] =
+            value[TABLE_COLUMNS.DEDUCTION_AMOUNT].toFixed(2);
         value[TABLE_COLUMNS.TOTAL_REVENUE] =
             value[TABLE_COLUMNS.TOTAL_REVENUE].toFixed(2);
 
@@ -397,6 +408,10 @@ const getFormAutoFiles = () => {
         fileList,
         RULES.CUSTOM_ADJUSMENTS
     );
+    const affiliatePaymentSummaryFile = pickBestByRule(
+        fileList,
+        RULES.AFFILIATE_PAYMENT_SUMMARY
+    );
 
     return {
         adsAdjustmentsRevenueFile,
@@ -407,6 +422,7 @@ const getFormAutoFiles = () => {
         youtubeShortsAdsFile,
         youtubeShortsSubscriptionFile,
         customAdjustmentsFile,
+        affiliatePaymentSummaryFile,
     };
 };
 

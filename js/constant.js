@@ -98,6 +98,10 @@ const RULES = {
             /channel_adjustments_summary_/i,
         ],
     },
+
+    AFFILIATE_PAYMENT_SUMMARY: {
+        requiredAny: [/_affiliate_payment_summary_/i],
+    },
 };
 
 const CSV_COLUMNS = {
@@ -108,6 +112,9 @@ const CSV_COLUMNS = {
     NET_PARTNER_REVENUE: "Net Partner Revenue (Post revshare)",
     ADJUSTMENT_TYPE: "Adjustment Type",
     DEDUCTION_AMOUNT: "Deduction Amount",
+    US_SOURECED_REVENUE: "US Sourced Revenue",
+    TAX_WITHHOLDING_RATE: "Tax Withholding Rate",
+    TAX_WITHHELD_AMOUNT: "Tax Withheld Amount",
 };
 
 const MATH_OPERATIONS = {
@@ -119,10 +126,12 @@ const ADJUSTMENT_TYPES = {
     MONETIZATION_DISABLED: {
         VALUE: "MONETIZATION DISABLED",
         OPERATION: MATH_OPERATIONS.MINUS,
+        CLASS_NAME: "bg-danger-subtle text-danger-emphasis",
     },
     CREDIT_APPEAL: {
         VALUE: "CREDIT - APPEAL",
         OPERATION: MATH_OPERATIONS.PLUS,
+        CLASS_NAME: "bg-success-subtle text-success-emphasis",
     },
 };
 
@@ -130,17 +139,13 @@ const TABLE_COLUMNS = {
     CHANNEL_ID: "UC",
     CHANNEL_NAME: "Name",
     CHANNEL_LINK: "Link",
-    ADS_ADJUSTMENTS_REVENUE: "Ads Adjustments Revenue",
-    ADS_REVENUE: "Ads Revenue",
-    PAID_FEATURES: "Paid Features",
-    SUBSCRIPTION_REVENUE_RED: "Subscription Revenue Red",
-    SUBSCRIPTION_REVENUE_RED_MUSIC: "Subscription Revenue Red Music",
-    YOUTUBE_SHORTS_ADS: "Youtube Shorts Ads",
-    YOUTUBE_SHORTS_SUBSCRIPTION: "Youtube Shorts Subscription",
+    US_REVENUE: "US Revenue",
+    TAX_WITHHOLDING_RATE: "Tax Withholding Rate",
+    TAX_WITHHELD_AMOUNT: "Tax Withheld Amount",
+    REVENUE: "Revenue",
+    DEDUCTION_AMOUNT: "Adjustment Amount",
     TOTAL_REVENUE: "Total Revenue",
-    ANT_SHARE: "ANT Share",
     NOTE: "Note",
-    DEDUCTION: "Deduction Amount",
 };
 
 const EXCEL_COLUMNS = [
@@ -163,50 +168,32 @@ const EXCEL_COLUMNS = [
         align: "left",
     },
     {
-        name: TABLE_COLUMNS.ADS_ADJUSTMENTS_REVENUE,
-        key: TABLE_COLUMNS.ADS_ADJUSTMENTS_REVENUE,
+        name: TABLE_COLUMNS.US_REVENUE,
+        key: TABLE_COLUMNS.US_REVENUE,
         width: 20,
         align: "right",
     },
     {
-        name: TABLE_COLUMNS.ADS_REVENUE,
-        key: TABLE_COLUMNS.ADS_REVENUE,
+        name: TABLE_COLUMNS.TAX_WITHHOLDING_RATE,
+        key: TABLE_COLUMNS.TAX_WITHHOLDING_RATE,
         width: 20,
         align: "right",
     },
     {
-        name: TABLE_COLUMNS.PAID_FEATURES,
-        key: TABLE_COLUMNS.PAID_FEATURES,
+        name: TABLE_COLUMNS.TAX_WITHHELD_AMOUNT,
+        key: TABLE_COLUMNS.TAX_WITHHELD_AMOUNT,
         width: 20,
         align: "right",
     },
     {
-        name: TABLE_COLUMNS.SUBSCRIPTION_REVENUE_RED,
-        key: TABLE_COLUMNS.SUBSCRIPTION_REVENUE_RED,
+        name: TABLE_COLUMNS.REVENUE,
+        key: TABLE_COLUMNS.REVENUE,
         width: 20,
         align: "right",
     },
     {
-        name: TABLE_COLUMNS.SUBSCRIPTION_REVENUE_RED_MUSIC,
-        key: TABLE_COLUMNS.SUBSCRIPTION_REVENUE_RED_MUSIC,
-        width: 20,
-        align: "right",
-    },
-    {
-        name: TABLE_COLUMNS.YOUTUBE_SHORTS_ADS,
-        key: TABLE_COLUMNS.YOUTUBE_SHORTS_ADS,
-        width: 20,
-        align: "right",
-    },
-    {
-        name: TABLE_COLUMNS.YOUTUBE_SHORTS_SUBSCRIPTION,
-        key: TABLE_COLUMNS.YOUTUBE_SHORTS_SUBSCRIPTION,
-        width: 20,
-        align: "right",
-    },
-    {
-        name: TABLE_COLUMNS.DEDUCTION,
-        key: TABLE_COLUMNS.DEDUCTION,
+        name: TABLE_COLUMNS.DEDUCTION_AMOUNT,
+        key: TABLE_COLUMNS.DEDUCTION_AMOUNT,
         width: 20,
         align: "right",
     },
@@ -222,10 +209,4 @@ const EXCEL_COLUMNS = [
         width: 35,
         align: "left",
     },
-    // {
-    //     name: TABLE_COLUMNS.ANT_SHARE,
-    //     key: TABLE_COLUMNS.ANT_SHARE,
-    //     width: 20,
-    //     align: "right",
-    // },
 ];
