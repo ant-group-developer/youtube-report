@@ -83,8 +83,29 @@ const exportExcel = (data) => {
     worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
         if (rowNumber <= headerRowNumber) return; // Bỏ dòng trước Header
 
+        if (row.values.includes(ADJUSTMENT_TYPES.CREDIT_APPEAL.VALUE)) {
+            console.log(1);
+            row.font = { name: "Arial", size: 12, color: { argb: "FFFFFFFF" } };
+            row.fill = {
+                type: "pattern",
+                pattern: "solid",
+                fgColor: { argb: "198754" },
+            };
+        } else if (
+            row.values.includes(ADJUSTMENT_TYPES.MONETIZATION_DISABLED.VALUE)
+        ) {
+            row.font = { name: "Arial", size: 12, color: { argb: "FFFFFFFF" } };
+            row.fill = {
+                type: "pattern",
+                pattern: "solid",
+                fgColor: { argb: "dc3545" },
+            };
+        } else {
+            row.font = { name: "Arial", size: 12 };
+        }
+
         row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-            cell.font = cell.font ?? { name: "Arial", size: 13 };
+            cell.font = cell.font ?? { name: "Arial", size: 12 };
             cell.border = {
                 top: { style: "thin" },
                 left: { style: "thin" },
@@ -156,13 +177,11 @@ const readFile = (file) => {
 };
 
 const getCsvData = async (file, headerKey, headerDetector) => {
-    console.log("file:", file);
     if (!file) {
         return [];
     }
 
     const rows = await readFile(file);
-    console.log("rows:", rows);
     const headerRowIndex = rows.findIndex((value) =>
         value.includes(headerDetector)
     );
@@ -175,7 +194,6 @@ const getCsvData = async (file, headerKey, headerDetector) => {
 
     const headerRow = rows[headerRowIndex];
     const channelIdIndex = headerRow.findIndex((item) => item === headerKey.id);
-    console.log("channelIdIndex:", channelIdIndex);
     const channelNameIndex = headerRow.findIndex(
         (item) => item === headerKey.name
     );

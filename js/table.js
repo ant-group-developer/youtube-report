@@ -19,7 +19,6 @@ const highlightText = (text, searchTerm) => {
 };
 
 const renderTable = (data, searchTerm = "") => {
-    console.log("data:", data);
     const tableBody = $("#table-body");
 
     // Kiểm tra nếu không có dữ liệu sau khi lọc
