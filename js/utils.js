@@ -179,12 +179,20 @@ const getCsvData = async (file, headerKey, headerDetector) => {
     const channelRevIndex = headerRow.findIndex(
         (item) => item === headerKey.revenue
     );
+    const deductionAmountIndex = headerRow.findIndex(
+        (item) => item === headerKey.deductionAmount
+    );
+    const adjustmentTypeIndex = headerRow.findIndex(
+        (item) => item === headerKey.adjustmentType
+    );
 
     for (i = headerRowIndex + 1; i < rows.length; i++) {
         const row = rows[i];
         const channelId = getCellData(row, channelIdIndex);
         const channelName = getCellData(row, channelNameIndex);
         const channelRev = getCellData(row, channelRevIndex);
+        const channelDeductionAmount = getCellData(row, deductionAmountIndex);
+        const channelAdjustmentType = getCellData(row, adjustmentTypeIndex);
 
         const uc = ensureUcPrefix(channelId);
 
@@ -192,6 +200,8 @@ const getCsvData = async (file, headerKey, headerDetector) => {
             channelId: uc,
             channelName: channelName || uc,
             channelRev: parseFloat(channelRev),
+            channelDeductionAmount,
+            channelAdjustmentType,
         });
     }
 

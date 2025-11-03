@@ -53,39 +53,41 @@
                 <table id="table" class="w-100 table table-striped">
                     <thead class="sticky-top bg-white">
                         <tr>
-                            <th data-field="UC" data-width="300" style="width: 15%;" data-width-unit="%">
+                            <th data-field="UC" data-width="300" style="width: 14%;" data-width-unit="%">
                                 Channel ID
                             </th>
-                            <th data-field="Name" data-width="300" style="width: 17%;" data-width-unit="%">
+                            <th data-field="Name" data-width="300" style="width: 14%;" data-width-unit="%">
                                 Name
                             </th>
-                            <th data-field="Ads Adjustments Revenue" data-width="200" style="width: 8.5%;"
+                            <th data-field="Ads Adjustments Revenue" data-width="200" style="width: 8%;"
                                 data-width-unit="%">
                                 Ads Adjustments Revenue
                             </th>
-                            <th data-field="Ads Revenue" data-width="200" style="width: 8.5%;" data-width-unit="%">
+                            <th data-field="Ads Revenue" data-width="200" style="width: 8%;" data-width-unit="%">
                                 Ads Revenue
                             </th>
-                            <th data-field="Paid Features" data-width="200" style="width: 8.5%;" data-width-unit="%">
+                            <th data-field="Paid Features" data-width="200" style="width: 8%;" data-width-unit="%">
                                 Paid Features
                             </th>
-                            <th data-field="Subscription Revenue Red" data-width="200" style="width: 8.5%;"
+                            <th data-field="Subscription Revenue Red" data-width="200" style="width: 8%;"
                                 data-width-unit="%">
                                 Subscription Revenue Red
                             </th>
-                            <th data-field="Subscription Revenue Red Music" data-width="200" style="width: 8.5%;"
+                            <th data-field="Subscription Revenue Red Music" data-width="200" style="width: 8%;"
                                 data-width-unit="%">
                                 Subscription Revenue Red Music
                             </th>
-                            <th data-field="Youtube Shorts Ads" data-width="200" style="width: 8.5%;"
-                                data-width-unit="%">
+                            <th data-field="Youtube Shorts Ads" data-width="200" style="width: 8%;" data-width-unit="%">
                                 Youtube Shorts Ads
                             </th>
-                            <th data-field="Youtube Shorts Subscription" data-width="200" style="width: 8.5%;"
+                            <th data-field="Youtube Shorts Subscription" data-width="200" style="width: 8%;"
                                 data-width-unit="%">
                                 Youtube Shorts Subscription
                             </th>
-                            <th data-field="Total Revenue" data-width="200" style="width: 8.5%;" data-width-unit="%">
+                            <th data-field="Deduction Amount" data-width="200" style="width: 8%;" data-width-unit="%">
+                                Deduction Amount
+                            </th>
+                            <th data-field="Total Revenue" data-width="200" style="width: 8%;" data-width-unit="%">
                                 Total Revenue
                             </th>
                         </tr>
@@ -105,6 +107,7 @@
                             <td class="bg-dark-subtle" data-field="Subscription Revenue Red Music">0</td>
                             <td class="bg-dark-subtle" data-field="Youtube Shorts Ads">0</td>
                             <td class="bg-dark-subtle" data-field="Youtube Shorts Subscription">0</td>
+                            <td class="bg-dark-subtle" data-field="Deduction Amount">0</td>
                             <td class="bg-dark-subtle" data-field="Total Revenue">0</td>
                         </tr>
                     </tfoot>
@@ -364,6 +367,9 @@
 
     <!-- PapaParse -->
     <script src="./libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+    <!-- Lodash -->
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
 
 
     <!--  -->

@@ -152,6 +152,16 @@ const getAllCsvData = async (values) => {
         CSV_COLUMNS.CHANNEL_ID
     );
 
+    const dataCustomAdjustments = await getCsvData(
+        values.customAdjustmentsFile,
+        {
+            id: CSV_COLUMNS.CHANNEL_ID,
+            adjustmentType: CSV_COLUMNS.ADJUSTMENT_TYPE,
+            deductionAmount: CSV_COLUMNS.DEDUCTION_AMOUNT,
+        },
+        CSV_COLUMNS.CHANNEL_ID
+    );
+
     return {
         dataAdsAdjustmentsRevenue,
         dataAdsRevenue,
@@ -160,6 +170,24 @@ const getAllCsvData = async (values) => {
         dataSubscriptionRevenueRedMusic,
         dataYoutubeShortsAds,
         dataYoutubeShortsSubscription,
+        dataCustomAdjustments,
+    };
+};
+
+const getNewCellData = (channelId, channelName) => {
+    return {
+        [TABLE_COLUMNS.CHANNEL_ID]: channelId,
+        [TABLE_COLUMNS.CHANNEL_NAME]: channelName,
+        [TABLE_COLUMNS.ADS_ADJUSTMENTS_REVENUE]: 0,
+        [TABLE_COLUMNS.ADS_REVENUE]: 0,
+        [TABLE_COLUMNS.PAID_FEATURES]: 0,
+        [TABLE_COLUMNS.SUBSCRIPTION_REVENUE_RED]: 0,
+        [TABLE_COLUMNS.SUBSCRIPTION_REVENUE_RED_MUSIC]: 0,
+        [TABLE_COLUMNS.YOUTUBE_SHORTS_ADS]: 0,
+        [TABLE_COLUMNS.YOUTUBE_SHORTS_SUBSCRIPTION]: 0,
+        [TABLE_COLUMNS.DEDUCTION]: 0,
+        [TABLE_COLUMNS.TOTAL_REVENUE]: 0,
+        [TABLE_COLUMNS.NOTE]: "",
     };
 };
 
@@ -169,24 +197,40 @@ const processRevenueData = (data, revenueColumn, tableData) => {
         let value = tableData.get(channelId);
 
         if (!value) {
-            value = {
-                [TABLE_COLUMNS.CHANNEL_ID]: channelId,
-                [TABLE_COLUMNS.CHANNEL_NAME]: channelName,
-                [TABLE_COLUMNS.ADS_ADJUSTMENTS_REVENUE]: 0,
-                [TABLE_COLUMNS.ADS_REVENUE]: 0,
-                [TABLE_COLUMNS.PAID_FEATURES]: 0,
-                [TABLE_COLUMNS.SUBSCRIPTION_REVENUE_RED]: 0,
-                [TABLE_COLUMNS.SUBSCRIPTION_REVENUE_RED_MUSIC]: 0,
-                [TABLE_COLUMNS.YOUTUBE_SHORTS_ADS]: 0,
-                [TABLE_COLUMNS.YOUTUBE_SHORTS_SUBSCRIPTION]: 0,
-                [TABLE_COLUMNS.TOTAL_REVENUE]: 0,
-            };
+            value = getNewCellData(channelId, channelName);
         }
 
         value[revenueColumn] += channelRev;
         value[TABLE_COLUMNS.TOTAL_REVENUE] += channelRev;
 
         tableData.set(channelId, value);
+    });
+};
+
+const processDeductionData = (data, revenueColumn, tableData) => {
+    data.forEach((item) => {
+        const { channelId, channelAdjustmentType, channelDeductionAmount } =
+            item;
+        let value = tableData.get(channelId);
+
+        let deductionAmount = channelDeductionAmount;
+
+        if (!value) {
+            value = getNewCellData(channelId, "");
+        }
+
+        if (
+            channelAdjustmentType ===
+            ADJUSTMENT_TYPES.MONETIZATION_DISABLED.VALUE
+        ) {
+            deductionAmount = channelDeductionAmount * -1;
+        }
+        // if (channelAdjustmentType === ADJUSTMENT_TYPES.CREDIT_APPEAL.VALUE) {
+        value[TABLE_COLUMNS.TOTAL_REVENUE] += deductionAmount;
+        // }
+
+        value[TABLE_COLUMNS.NOTE] = channelAdjustmentType;
+        value[revenueColumn] += deductionAmount;
     });
 };
 
@@ -199,6 +243,7 @@ const convertTableData = (allCsvData) => {
         dataSubscriptionRevenueRedMusic,
         dataYoutubeShortsAds,
         dataYoutubeShortsSubscription,
+        dataCustomAdjustments,
     } = allCsvData;
 
     const tableData = new Map();
@@ -248,6 +293,13 @@ const convertTableData = (allCsvData) => {
         tableData
     );
 
+    // Custom Adjustments - Deduction Amount
+    processDeductionData(
+        dataCustomAdjustments,
+        TABLE_COLUMNS.DEDUCTION,
+        tableData
+    );
+
     const result = Array.from(tableData, ([_, value]) => {
         value[TABLE_COLUMNS.ADS_ADJUSTMENTS_REVENUE] =
             value[TABLE_COLUMNS.ADS_ADJUSTMENTS_REVENUE].toFixed(2);
@@ -263,6 +315,8 @@ const convertTableData = (allCsvData) => {
             value[TABLE_COLUMNS.YOUTUBE_SHORTS_ADS].toFixed(2);
         value[TABLE_COLUMNS.YOUTUBE_SHORTS_SUBSCRIPTION] =
             value[TABLE_COLUMNS.YOUTUBE_SHORTS_SUBSCRIPTION].toFixed(2);
+        value[TABLE_COLUMNS.DEDUCTION] =
+            value[TABLE_COLUMNS.DEDUCTION].toFixed(2);
         value[TABLE_COLUMNS.TOTAL_REVENUE] =
             value[TABLE_COLUMNS.TOTAL_REVENUE].toFixed(2);
 
@@ -339,6 +393,10 @@ const getFormAutoFiles = () => {
         RULES.ADS_ADJUSTMENTS_REVENUE
     );
     const adsRevenueFile = pickBestByRule(fileList, RULES.ADS_REVENUE);
+    const customAdjustmentsFile = pickBestByRule(
+        fileList,
+        RULES.CUSTOM_ADJUSMENTS
+    );
 
     return {
         adsAdjustmentsRevenueFile,
@@ -348,6 +406,7 @@ const getFormAutoFiles = () => {
         subscriptionRevenueRedMusicFile,
         youtubeShortsAdsFile,
         youtubeShortsSubscriptionFile,
+        customAdjustmentsFile,
     };
 };
 

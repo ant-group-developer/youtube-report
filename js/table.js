@@ -69,6 +69,11 @@ const renderTable = (data, searchTerm = "") => {
             item[TABLE_COLUMNS.YOUTUBE_SHORTS_SUBSCRIPTION],
             searchTerm
         );
+        const deductionAmount = formatNumber(
+            item[TABLE_COLUMNS.DEDUCTION],
+            searchTerm
+        );
+        const note = item[TABLE_COLUMNS.NOTE] || "";
         const totalRevenue = formatNumber(
             item[TABLE_COLUMNS.TOTAL_REVENUE],
             searchTerm
@@ -106,6 +111,9 @@ const renderTable = (data, searchTerm = "") => {
                 </td>
                 <td data-field="Youtube Shorts Subscription" data-width="200">
                     ${youtubeShortsSubscription}
+                </td>
+                <td data-field="Deduction Amount" data-width="200" title="${note}">
+                    ${deductionAmount}
                 </td>
                 <td data-field="Total Revenue" data-width="200">
                     ${totalRevenue}
@@ -229,6 +237,7 @@ const renderFooter = (data) => {
     let totalSubscriptionRedMusic = 0;
     let totalYoutubeShortsAds = 0;
     let totalYoutubeShortsSubscription = 0;
+    let deductionAmount = 0;
     let totalRevenue = 0;
 
     data.forEach((item) => {
@@ -244,6 +253,7 @@ const renderFooter = (data) => {
             Number(item[TABLE_COLUMNS.YOUTUBE_SHORTS_ADS]) || 0;
         totalYoutubeShortsSubscription +=
             Number(item[TABLE_COLUMNS.YOUTUBE_SHORTS_SUBSCRIPTION]) || 0;
+        deductionAmount += Number(item[TABLE_COLUMNS.DEDUCTION]) || 0;
         totalRevenue += Number(item[TABLE_COLUMNS.TOTAL_REVENUE]) || 0;
     });
 
@@ -263,6 +273,7 @@ const renderFooter = (data) => {
         <td class="bg-dark-subtle">${formatNumber(
             totalYoutubeShortsSubscription
         )}</td>
+        <td class="bg-dark-subtle">${formatNumber(deductionAmount)}</td>
         <td class="bg-dark-subtle">${formatNumber(totalRevenue)}</td>
         `;
     footer.html(footerContent);

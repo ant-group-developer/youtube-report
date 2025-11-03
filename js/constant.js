@@ -91,6 +91,13 @@ const RULES = {
             /(?:^|[_-])day(?:[_-]|$)/i,
         ],
     },
+
+    CUSTOM_ADJUSMENTS: {
+        requiredAny: [
+            /custom_month_channel_adjustments_/i,
+            /channel_adjustments_summary_/i,
+        ],
+    },
 };
 
 const CSV_COLUMNS = {
@@ -99,6 +106,24 @@ const CSV_COLUMNS = {
     PARTNER_REVENUE: "Partner Revenue",
     EARNINGS: "Earnings (USD)",
     NET_PARTNER_REVENUE: "Net Partner Revenue (Post revshare)",
+    ADJUSTMENT_TYPE: "Adjustment Type",
+    DEDUCTION_AMOUNT: "Deduction Amount",
+};
+
+const MATH_OPERATIONS = {
+    PLUS: "Plus",
+    MINUS: "Minus",
+};
+
+const ADJUSTMENT_TYPES = {
+    MONETIZATION_DISABLED: {
+        VALUE: "MONETIZATION DISABLED",
+        OPERATION: MATH_OPERATIONS.MINUS,
+    },
+    CREDIT_APPEAL: {
+        VALUE: "CREDIT - APPEAL",
+        OPERATION: MATH_OPERATIONS.PLUS,
+    },
 };
 
 const TABLE_COLUMNS = {
@@ -114,6 +139,8 @@ const TABLE_COLUMNS = {
     YOUTUBE_SHORTS_SUBSCRIPTION: "Youtube Shorts Subscription",
     TOTAL_REVENUE: "Total Revenue",
     ANT_SHARE: "ANT Share",
+    NOTE: "Note",
+    DEDUCTION: "Deduction Amount",
 };
 
 const EXCEL_COLUMNS = [
@@ -178,10 +205,22 @@ const EXCEL_COLUMNS = [
         align: "right",
     },
     {
+        name: TABLE_COLUMNS.DEDUCTION,
+        key: TABLE_COLUMNS.DEDUCTION,
+        width: 20,
+        align: "right",
+    },
+    {
         name: TABLE_COLUMNS.TOTAL_REVENUE,
         key: TABLE_COLUMNS.TOTAL_REVENUE,
         width: 20,
         align: "right",
+    },
+    {
+        name: TABLE_COLUMNS.NOTE,
+        key: TABLE_COLUMNS.NOTE,
+        width: 35,
+        align: "left",
     },
     // {
     //     name: TABLE_COLUMNS.ANT_SHARE,
