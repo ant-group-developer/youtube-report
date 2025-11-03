@@ -11,9 +11,9 @@ html {
     border-spacing: 0px 0px;
 }
 
-#table thead {
+/* #table thead {
     top: 48px;
-}
+} */
 
 #table th,
 #table td {
