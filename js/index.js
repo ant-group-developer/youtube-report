@@ -6,6 +6,86 @@ $("#csv-form").on("change", 'input[type="file"]', function () {
     // validateFileInput(inputId, errorId);
 });
 
+// Scan files when selected for Auto Import
+$("#file-list").on("change", function () {
+    const files = Array.from(this.files);
+    if (files.length === 0) {
+        $("#auto-file-details").addClass("d-none");
+        return;
+    }
+
+    // Extract unique months
+    const months = new Set();
+    files.forEach((f) => {
+        const key = extractMonthKey(f.name);
+        if (key) months.add(key);
+    });
+
+    const monthSelect = $("#month-select");
+    monthSelect.empty();
+    
+    // Sort descending
+    const sortedMonths = Array.from(months).sort().reverse();
+    
+    sortedMonths.forEach((m) => {
+        monthSelect.append(`<option value="${m}">${formatMonthKey(m)}</option>`);
+    });
+
+    if (sortedMonths.length > 0) {
+        $("#auto-file-details").removeClass("d-none");
+        monthSelect.trigger("change"); // Populates file list preview
+    } else {
+        $("#auto-file-details").addClass("d-none");
+    }
+});
+
+// Update preview list on month select
+$("#month-select").on("change", function () {
+    const selectedMonth = $(this).val();
+    if (!selectedMonth) return;
+
+    const filesObj = getFormAutoFiles();
+
+    const processedList = $("#processed-files-list");
+    processedList.empty();
+
+    if (!filesObj) return;
+
+    const items = [
+        { label: "Shorts Subscription", file: filesObj.youtubeShortsSubscriptionFile, rule: RULES.YOUTUBE_SHORTS_SUBSCRIPTION },
+        { label: "Shorts Ads", file: filesObj.youtubeShortsAdsFile, rule: RULES.YOUTUBE_SHORTS_ADS },
+        { label: "Subscription Red Music", file: filesObj.subscriptionRevenueRedMusicFile, rule: RULES.SUBSCRIPTION_REVENUE_RED_MUSIC },
+        { label: "Subscription Red", file: filesObj.subscriptionRevenueRedFile, rule: RULES.SUBSCRIPTION_REVENUE_RED },
+        { label: "Paid Features", file: filesObj.paidFeaturesFile, rule: RULES.PAID_FEATURES },
+        { label: "Ads Adjustments", file: filesObj.adsAdjustmentsRevenueFile, rule: RULES.ADS_ADJUSTMENTS_REVENUE },
+        { label: "Ads Revenue", file: filesObj.adsRevenueFile, rule: RULES.ADS_REVENUE },
+        { label: "Custom Adjustments", file: filesObj.customAdjustmentsFile, rule: RULES.CUSTOM_ADJUSMENTS },
+        { label: "Affiliate Summary", file: filesObj.affiliatePaymentSummaryFile, rule: RULES.AFFILIATE_PAYMENT_SUMMARY }
+    ];
+
+    items.forEach((item) => {
+        let ruleHtml = '';
+        if (item.rule) {
+            // Convert regex array to readable strings
+            const req = (item.rule.requiredAny || []).filter(Boolean).map(r => String(r).replace(/</g, "&lt;").replace(/>/g, "&gt;")).join(" <span class='text-primary fw-bold'>OR</span> ");
+            const forbidden = (item.rule.forbidden || []).filter(Boolean).map(r => String(r).replace(/</g, "&lt;").replace(/>/g, "&gt;")).join(", ");
+            ruleHtml = `<details class="mt-2" style="font-size: 0.75rem; line-height: 1.2;">
+                <summary class="text-secondary opacity-75 fw-medium user-select-none text-decoration-underline" style="cursor: pointer;">View matching rules</summary>
+                <div class="mt-1 ms-2 p-2 bg-light border rounded">
+                    <div class="text-muted"><strong class="text-secondary">Match:</strong> ${req}</div>
+                    ${forbidden ? `<div class="text-muted mt-1"><strong class="text-secondary">Exclude:</strong> ${forbidden}</div>` : ''}
+                </div>
+            </details>`;
+        }
+
+        if (item.file) {
+             processedList.append(`<li class="list-group-item text-success"><i class="bi bi-check-circle-fill me-2"></i><strong>${item.label}:</strong> <span class="text-dark">${item.file.name}</span>${ruleHtml}</li>`);
+        } else {
+             processedList.append(`<li class="list-group-item text-danger text-opacity-50"><i class="bi bi-x-circle-fill me-2"></i><strong>${item.label}:</strong> <span class="fst-italic">Not found</span>${ruleHtml}</li>`);
+        }
+    });
+});
+
 const getFormManualFiles = () => {
     // Reset lỗi trước khi kiểm tra
     $(".error-message").text("");
@@ -398,7 +478,12 @@ const getFormAutoFiles = () => {
     const input = $("#file-list")[0];
     if (!input || !input.files || input.files.length === 0) return;
 
-    const fileList = Array.from(input.files);
+    let fileList = Array.from(input.files);
+
+    const selectedMonth = $("#month-select").val();
+    if (selectedMonth) {
+        fileList = fileList.filter((f) => extractMonthKey(f.name) === selectedMonth);
+    }
 
     const youtubeShortsSubscriptionFile = pickBestByRule(
         fileList,

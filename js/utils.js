@@ -300,14 +300,22 @@ const validateCsvFile = (inputId, errorId) => {
     const fileInput = document.getElementById(inputId);
     const errorMessage = document.getElementById(errorId);
 
-    const file = fileInput.files[0]; // Get the selected file
-    if (!file) {
+    const files = fileInput.files;
+    if (!files || files.length === 0) {
         return false;
     }
 
-    const fileType = file.type;
-    if (fileType !== "text/csv" && !file.name.endsWith(".csv")) {
-        errorMessage.textContent = "Please select a valid CSV file.";
+    let isValid = true;
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.type !== "text/csv" && !file.name.endsWith(".csv")) {
+            isValid = false;
+            break;
+        }
+    }
+
+    if (!isValid) {
+        errorMessage.textContent = "Please select valid CSV files only.";
         fileInput.classList.add("is-invalid");
         fileInput.classList.remove("is-valid");
         return false;
@@ -340,6 +348,19 @@ const parseNewestDateKey = (name) => {
     const dates = name.match(/20\d{6}/g);
     if (!dates) return -1;
     return Math.max(...dates.map((d) => parseInt(d, 10)));
+};
+
+const extractMonthKey = (name) => {
+    const maxDate = parseNewestDateKey(name);
+    if (maxDate === -1) return null;
+    return maxDate.toString().substring(0, 6); // Extract YYYYMM
+};
+
+const formatMonthKey = (monthKey) => {
+    if (!monthKey || monthKey.length !== 6) return monthKey;
+    const year = monthKey.substring(0, 4);
+    const month = monthKey.substring(4, 6);
+    return `${year}-${month}`; // Format as YYYY-MM
 };
 
 const matchesRule = (name, rule) => {
