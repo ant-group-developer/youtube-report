@@ -169,6 +169,7 @@ const getAllCsvData = async (values) => {
             usSourcedRevenue: CSV_COLUMNS.US_SOURECED_REVENUE,
             taxWithholdingRate: CSV_COLUMNS.TAX_WITHHOLDING_RATE,
             taxWithheldAmount: CSV_COLUMNS.TAX_WITHHELD_AMOUNT,
+            localCurrency: CSV_COLUMNS.LOCAL_CURRENCY,
         },
         CSV_COLUMNS.CHANNEL_ID
     );
@@ -243,14 +244,30 @@ const processDeductionData = (data, tableData) => {
 };
 
 const processAffiliatePaymentData = (data, tableData) => {
+    let hasAlertedCurrency = false;
+
     data.forEach((item) => {
         const {
             channelId,
             channelUsSourcedRevenue,
             channelTaxWithholdingRate,
             channelTaxWithheldAmount,
+            channelLocalCurrency,
+            fileName,
         } = item;
         let value = tableData.get(channelId);
+
+        if (channelLocalCurrency && channelLocalCurrency !== "USD" && !hasAlertedCurrency) {
+            const alertHtml = `
+                <div class="alert alert-warning alert-dismissible fade show mb-0" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>Currency Mismatch in "${fileName}":</strong> The affiliate payment summary contains Local Currency <strong>"${channelLocalCurrency}"</strong> instead of USD. Tax and revenue amounts might be inaccurate.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            $("#alert-container").append(alertHtml);
+            hasAlertedCurrency = true;
+        }
 
         if (!value) {
             value = getNewCellData(channelId, "");
@@ -347,6 +364,7 @@ const convertTableData = (allCsvData) => {
 const onSubmitManual = async (e) => {
     e.preventDefault(); // Prevent the form from submitting
 
+    $("#alert-container").empty(); // Clear old alerts
     showLoading(BUTTON_SUBMIT_MANUAL_ID);
 
     try {
@@ -429,6 +447,7 @@ const getFormAutoFiles = () => {
 const onSubmitAuto = async (e) => {
     e.preventDefault(); // Prevent the form from submitting
 
+    $("#alert-container").empty(); // Clear old alerts
     showLoading(BUTTON_SUBMIT_AUTO_ID);
 
     try {

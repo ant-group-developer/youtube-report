@@ -100,7 +100,10 @@ const RULES = {
     },
 
     AFFILIATE_PAYMENT_SUMMARY: {
-        requiredAny: [/_affiliate_payment_summary_/i],
+        requiredAny: [
+            /_affiliate_payment_summary_/i,
+            /custom_month_affiliate_tax_summary_/i,
+        ],
     },
 };
 
@@ -115,6 +118,7 @@ const CSV_COLUMNS = {
     US_SOURECED_REVENUE: "US Sourced Revenue",
     TAX_WITHHOLDING_RATE: "Tax Withholding Rate",
     TAX_WITHHELD_AMOUNT: "Tax Withheld Amount",
+    LOCAL_CURRENCY: "Local Currency",
 };
 
 const MATH_OPERATIONS = {

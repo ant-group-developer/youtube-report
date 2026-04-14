@@ -217,6 +217,9 @@ const getCsvData = async (file, headerKey, headerDetector) => {
     const taxWithheldAmountIndex = headerRow.findIndex(
         (item) => item === headerKey.taxWithheldAmount
     );
+    const localCurrencyIndex = headerRow.findIndex(
+        (item) => item === headerKey.localCurrency
+    );
 
     for (i = headerRowIndex + 1; i < rows.length; i++) {
         const row = rows[i];
@@ -234,6 +237,7 @@ const getCsvData = async (file, headerKey, headerDetector) => {
             row,
             taxWithheldAmountIndex
         );
+        const channelLocalCurrency = getCellData(row, localCurrencyIndex);
 
         const uc = ensureUcPrefix(channelId);
 
@@ -248,6 +252,8 @@ const getCsvData = async (file, headerKey, headerDetector) => {
                 channelTaxWithheldAmount || "0"
             ),
             channelTaxWithholdingRate,
+            channelLocalCurrency,
+            fileName: file.name,
         });
     }
 
