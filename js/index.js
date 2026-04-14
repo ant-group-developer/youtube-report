@@ -280,7 +280,7 @@ const convertTableData = (allCsvData) => {
     // Ads Adjustments Revenue
     processRevenueData(
         dataAdsAdjustmentsRevenue,
-        TABLE_COLUMNS.ADS_ADJUSTMENTS_REVENUE,
+        TABLE_COLUMNS.REVENUE,
         tableData
     );
 

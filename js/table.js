@@ -227,14 +227,9 @@ const renderFooter = (data) => {
 
     data.forEach((item) => {
         totalUsRevenue += Number(item[TABLE_COLUMNS.US_REVENUE]) || 0;
-        totalTaxWithheldAmount +=
-            Number(item[TABLE_COLUMNS.TAX_WITHHELD_AMOUNT]) || 0;
-        totalTaxWithheldAmount +=
-            Number(item[TABLE_COLUMNS.TAX_WITHHELD_AMOUNT]) || 0;
-        totalTaxWithheldAmount +=
-            Number(item[TABLE_COLUMNS.TAX_WITHHELD_AMOUNT]) || 0;
-        totalDeductionAmount +=
-            Number(item[TABLE_COLUMNS.DEDUCTION_AMOUNT]) || 0;
+        totalTaxWithheldAmount += Number(item[TABLE_COLUMNS.TAX_WITHHELD_AMOUNT]) || 0;
+        totalRevenue += Number(item[TABLE_COLUMNS.REVENUE]) || 0;
+        totalDeductionAmount += Number(item[TABLE_COLUMNS.DEDUCTION_AMOUNT]) || 0;
         totalFinalRevenue += Number(item[TABLE_COLUMNS.TOTAL_REVENUE]) || 0;
     });
 
