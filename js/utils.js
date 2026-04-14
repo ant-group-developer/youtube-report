@@ -218,7 +218,7 @@ const getCsvData = async (file, headerKey, headerDetector) => {
         (item) => item === headerKey.taxWithheldAmount
     );
     const localCurrencyIndex = headerRow.findIndex(
-        (item) => item === headerKey.localCurrency
+        (item) => item === (headerKey && headerKey.localCurrency) || item === CSV_COLUMNS.LOCAL_CURRENCY
     );
 
     for (i = headerRowIndex + 1; i < rows.length; i++) {

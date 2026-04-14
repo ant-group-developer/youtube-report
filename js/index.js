@@ -324,8 +324,6 @@ const processDeductionData = (data, tableData) => {
 };
 
 const processAffiliatePaymentData = (data, tableData) => {
-    let hasAlertedCurrency = false;
-
     data.forEach((item) => {
         const {
             channelId,
@@ -336,18 +334,6 @@ const processAffiliatePaymentData = (data, tableData) => {
             fileName,
         } = item;
         let value = tableData.get(channelId);
-
-        if (channelLocalCurrency && channelLocalCurrency !== "USD" && !hasAlertedCurrency) {
-            const alertHtml = `
-                <div class="alert alert-warning alert-dismissible fade show mb-0" role="alert">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                    <strong>Currency Mismatch in "${fileName}":</strong> The affiliate payment summary contains Local Currency <strong>"${channelLocalCurrency}"</strong> instead of USD. Tax and revenue amounts might be inaccurate.
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            `;
-            $("#alert-container").append(alertHtml);
-            hasAlertedCurrency = true;
-        }
 
         if (!value) {
             value = getNewCellData(channelId, "");
@@ -371,6 +357,33 @@ const convertTableData = (allCsvData) => {
         dataCustomAdjustments,
         dataAffiliatePaymentSummary,
     } = allCsvData;
+
+    // Check for Local Currency mismatches across all files
+    const nonUsdFiles = new Map(); // using map to avoid duplicates and store currency
+    Object.values(allCsvData).forEach(dataset => {
+        if (!dataset) return;
+        dataset.forEach(row => {
+            if (row.channelLocalCurrency && row.channelLocalCurrency !== "USD") {
+                nonUsdFiles.set(row.fileName, row.channelLocalCurrency);
+            }
+        });
+    });
+
+    if (nonUsdFiles.size > 0) {
+        const fileAlerts = Array.from(nonUsdFiles.entries()).map(([fName, currency]) => {
+            return `<li><strong>${fName}</strong> (Currency: ${currency})</li>`;
+        }).join('');
+
+        const alertHtml = `
+            <div class="alert alert-warning alert-dismissible fade show mb-0" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <strong>Currency Mismatch Detected:</strong> The following processing files contain a Local Currency different from USD. Resulting amounts might be inaccurate:
+                <ul class="mt-2 mb-0">${fileAlerts}</ul>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        `;
+        $("#alert-container").append(alertHtml);
+    }
 
     const tableData = new Map();
 
