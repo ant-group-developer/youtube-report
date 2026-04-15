@@ -34,7 +34,7 @@ const exportExcel = (data) => {
         width: col.width ?? 20,
     }));
     const columnAlignMap = Object.fromEntries(
-        EXCEL_COLUMNS.map((col) => [col.key, col.align ?? "left"])
+        EXCEL_COLUMNS.map((col) => [col.key, col.align ?? "left"]),
     );
 
     const headerRowNumber = 1;
@@ -183,7 +183,7 @@ const getCsvData = async (file, headerKey, headerDetector) => {
 
     const rows = await readFile(file);
     const headerRowIndex = rows.findIndex((value) =>
-        value.includes(headerDetector)
+        value.includes(headerDetector),
     );
 
     if (headerRowIndex === -1) {
@@ -195,30 +195,32 @@ const getCsvData = async (file, headerKey, headerDetector) => {
     const headerRow = rows[headerRowIndex];
     const channelIdIndex = headerRow.findIndex((item) => item === headerKey.id);
     const channelNameIndex = headerRow.findIndex(
-        (item) => item === headerKey.name
+        (item) => item === headerKey.name,
     );
     const channelRevIndex = headerRow.findIndex(
-        (item) => item === headerKey.revenue
+        (item) => item === headerKey.revenue,
     );
 
     const deductionAmountIndex = headerRow.findIndex(
-        (item) => item === headerKey.deductionAmount
+        (item) => item === headerKey.deductionAmount,
     );
     const adjustmentTypeIndex = headerRow.findIndex(
-        (item) => item === headerKey.adjustmentType
+        (item) => item === headerKey.adjustmentType,
     );
 
     const usSourcedRevenueIndex = headerRow.findIndex(
-        (item) => item === headerKey.usSourcedRevenue
+        (item) => item === headerKey.usSourcedRevenue,
     );
     const taxWithholdingRateIndex = headerRow.findIndex(
-        (item) => item === headerKey.taxWithholdingRate
+        (item) => item === headerKey.taxWithholdingRate,
     );
     const taxWithheldAmountIndex = headerRow.findIndex(
-        (item) => item === headerKey.taxWithheldAmount
+        (item) => item === headerKey.taxWithheldAmount,
     );
     const localCurrencyIndex = headerRow.findIndex(
-        (item) => item === (headerKey && headerKey.localCurrency) || item === CSV_COLUMNS.LOCAL_CURRENCY
+        (item) =>
+            item === (headerKey && headerKey.localCurrency) ||
+            item === CSV_COLUMNS.LOCAL_CURRENCY,
     );
 
     for (i = headerRowIndex + 1; i < rows.length; i++) {
@@ -231,11 +233,11 @@ const getCsvData = async (file, headerKey, headerDetector) => {
         const channelUsSourcedRevenue = getCellData(row, usSourcedRevenueIndex);
         const channelTaxWithholdingRate = getCellData(
             row,
-            taxWithholdingRateIndex
+            taxWithholdingRateIndex,
         );
         const channelTaxWithheldAmount = getCellData(
             row,
-            taxWithheldAmountIndex
+            taxWithheldAmountIndex,
         );
         const channelLocalCurrency = getCellData(row, localCurrencyIndex);
 
@@ -249,7 +251,7 @@ const getCsvData = async (file, headerKey, headerDetector) => {
             channelAdjustmentType,
             channelUsSourcedRevenue: parseFloat(channelUsSourcedRevenue || "0"),
             channelTaxWithheldAmount: parseFloat(
-                channelTaxWithheldAmount || "0"
+                channelTaxWithheldAmount || "0",
             ),
             channelTaxWithholdingRate,
             channelLocalCurrency,

@@ -14,21 +14,26 @@ $("#file-list").on("change", function () {
         return;
     }
 
-    // Extract unique months
+    // Extract unique months only from files that match at least one rule
+    const allRules = Object.values(RULES);
     const months = new Set();
     files.forEach((f) => {
+        const matchesAnyRule = allRules.some((rule) => matchesRule(f.name, rule));
+        if (!matchesAnyRule) return;
         const key = extractMonthKey(f.name);
         if (key) months.add(key);
     });
 
     const monthSelect = $("#month-select");
     monthSelect.empty();
-    
+
     // Sort descending
     const sortedMonths = Array.from(months).sort().reverse();
-    
+
     sortedMonths.forEach((m) => {
-        monthSelect.append(`<option value="${m}">${formatMonthKey(m)}</option>`);
+        monthSelect.append(
+            `<option value="${m}">${formatMonthKey(m)}</option>`,
+        );
     });
 
     if (sortedMonths.length > 0) {
@@ -52,36 +57,86 @@ $("#month-select").on("change", function () {
     if (!filesObj) return;
 
     const items = [
-        { label: "Shorts Subscription", file: filesObj.youtubeShortsSubscriptionFile, rule: RULES.YOUTUBE_SHORTS_SUBSCRIPTION },
-        { label: "Shorts Ads", file: filesObj.youtubeShortsAdsFile, rule: RULES.YOUTUBE_SHORTS_ADS },
-        { label: "Subscription Red Music", file: filesObj.subscriptionRevenueRedMusicFile, rule: RULES.SUBSCRIPTION_REVENUE_RED_MUSIC },
-        { label: "Subscription Red", file: filesObj.subscriptionRevenueRedFile, rule: RULES.SUBSCRIPTION_REVENUE_RED },
-        { label: "Paid Features", file: filesObj.paidFeaturesFile, rule: RULES.PAID_FEATURES },
-        { label: "Ads Adjustments", file: filesObj.adsAdjustmentsRevenueFile, rule: RULES.ADS_ADJUSTMENTS_REVENUE },
-        { label: "Ads Revenue", file: filesObj.adsRevenueFile, rule: RULES.ADS_REVENUE },
-        { label: "Custom Adjustments", file: filesObj.customAdjustmentsFile, rule: RULES.CUSTOM_ADJUSMENTS },
-        { label: "Affiliate Summary", file: filesObj.affiliatePaymentSummaryFile, rule: RULES.AFFILIATE_PAYMENT_SUMMARY }
+        {
+            label: "Shorts Subscription",
+            file: filesObj.youtubeShortsSubscriptionFile,
+            rule: RULES.YOUTUBE_SHORTS_SUBSCRIPTION,
+        },
+        {
+            label: "Shorts Ads",
+            file: filesObj.youtubeShortsAdsFile,
+            rule: RULES.YOUTUBE_SHORTS_ADS,
+        },
+        {
+            label: "Subscription Red Music",
+            file: filesObj.subscriptionRevenueRedMusicFile,
+            rule: RULES.SUBSCRIPTION_REVENUE_RED_MUSIC,
+        },
+        {
+            label: "Subscription Red",
+            file: filesObj.subscriptionRevenueRedFile,
+            rule: RULES.SUBSCRIPTION_REVENUE_RED,
+        },
+        {
+            label: "Paid Features",
+            file: filesObj.paidFeaturesFile,
+            rule: RULES.PAID_FEATURES,
+        },
+        {
+            label: "Ads Adjustments",
+            file: filesObj.adsAdjustmentsRevenueFile,
+            rule: RULES.ADS_ADJUSTMENTS_REVENUE,
+        },
+        {
+            label: "Ads Revenue",
+            file: filesObj.adsRevenueFile,
+            rule: RULES.ADS_REVENUE,
+        },
+        {
+            label: "Custom Adjustments",
+            file: filesObj.customAdjustmentsFile,
+            rule: RULES.CUSTOM_ADJUSMENTS,
+        },
+        {
+            label: "Affiliate Summary",
+            file: filesObj.affiliatePaymentSummaryFile,
+            rule: RULES.AFFILIATE_PAYMENT_SUMMARY,
+        },
     ];
 
     items.forEach((item) => {
-        let ruleHtml = '';
+        let ruleHtml = "";
         if (item.rule) {
             // Convert regex array to readable strings
-            const req = (item.rule.requiredAny || []).filter(Boolean).map(r => String(r).replace(/</g, "&lt;").replace(/>/g, "&gt;")).join(" <span class='text-primary fw-bold'>OR</span> ");
-            const forbidden = (item.rule.forbidden || []).filter(Boolean).map(r => String(r).replace(/</g, "&lt;").replace(/>/g, "&gt;")).join(", ");
+            const req = (item.rule.requiredAny || [])
+                .filter(Boolean)
+                .map((r) =>
+                    String(r).replace(/</g, "&lt;").replace(/>/g, "&gt;"),
+                )
+                .join(" <span class='text-primary fw-bold'>OR</span> ");
+            const forbidden = (item.rule.forbidden || [])
+                .filter(Boolean)
+                .map((r) =>
+                    String(r).replace(/</g, "&lt;").replace(/>/g, "&gt;"),
+                )
+                .join(", ");
             ruleHtml = `<details class="mt-2" style="font-size: 0.75rem; line-height: 1.2;">
                 <summary class="text-secondary opacity-75 fw-medium user-select-none text-decoration-underline" style="cursor: pointer;">View matching rules</summary>
                 <div class="mt-1 ms-2 p-2 bg-light border rounded">
                     <div class="text-muted"><strong class="text-secondary">Match:</strong> ${req}</div>
-                    ${forbidden ? `<div class="text-muted mt-1"><strong class="text-secondary">Exclude:</strong> ${forbidden}</div>` : ''}
+                    ${forbidden ? `<div class="text-muted mt-1"><strong class="text-secondary">Exclude:</strong> ${forbidden}</div>` : ""}
                 </div>
             </details>`;
         }
 
         if (item.file) {
-             processedList.append(`<li class="list-group-item text-success"><i class="bi bi-check-circle-fill me-2"></i><strong>${item.label}:</strong> <span class="text-dark">${item.file.name}</span>${ruleHtml}</li>`);
+            processedList.append(
+                `<li class="list-group-item text-success"><i class="bi bi-check-circle-fill me-2"></i><strong>${item.label}:</strong> <span class="text-dark">${item.file.name}</span>${ruleHtml}</li>`,
+            );
         } else {
-             processedList.append(`<li class="list-group-item text-danger text-opacity-50"><i class="bi bi-x-circle-fill me-2"></i><strong>${item.label}:</strong> <span class="fst-italic">Not found</span>${ruleHtml}</li>`);
+            processedList.append(
+                `<li class="list-group-item text-danger text-opacity-50"><i class="bi bi-x-circle-fill me-2"></i><strong>${item.label}:</strong> <span class="fst-italic">Not found</span>${ruleHtml}</li>`,
+            );
         }
     });
 });
@@ -122,28 +177,28 @@ const getFormManualFiles = () => {
 
     const adsAdjustmentsRevenueFile = validateFile(
         "ads-adjustments-revenue",
-        "ads-adjustments-revenue-error"
+        "ads-adjustments-revenue-error",
     );
     const adsRevenueFile = validateFile("ads-revenue", "ads-revenue-error");
     const paidFeaturesFile = validateFile(
         "paid-features",
-        "paid-features-error"
+        "paid-features-error",
     );
     const subscriptionRevenueRedFile = validateFile(
         "subscription-revenue-red",
-        "subscription-revenue-red-error"
+        "subscription-revenue-red-error",
     );
     const subscriptionRevenueRedMusicFile = validateFile(
         "subscription-revenue-red-music",
-        "subscription-revenue-red-music-error"
+        "subscription-revenue-red-music-error",
     );
     const youtubeShortsAdsFile = validateFile(
         "youtube-shorts-ads",
-        "youtube-shorts-ads-error"
+        "youtube-shorts-ads-error",
     );
     const youtubeShortsSubscriptionFile = validateFile(
         "youtube-shorts-subscription",
-        "youtube-shorts-subscription-error"
+        "youtube-shorts-subscription-error",
     );
 
     if (!validateSuccess) {
@@ -161,6 +216,52 @@ const getFormManualFiles = () => {
     };
 };
 
+const logRevenueSummary = (prefix, allCsvData) => {
+    const sumRaw = (arr, key) => {
+        if (!arr) return 0;
+        return arr.reduce((sum, row) => sum + (row[key] || 0), 0);
+    };
+
+    const sumCustomAdj = (arr) => {
+        if (!arr) return 0;
+        return arr.reduce((sum, row) => {
+            let amount = row.channelDeductionAmount || 0;
+            if (row.channelAdjustmentType === ADJUSTMENT_TYPES.MONETIZATION_DISABLED.VALUE) {
+                amount *= -1;
+            }
+            return sum + amount;
+        }, 0);
+    };
+
+    const format = (val) => val.toLocaleString("en-US", { style: "currency", currency: "USD" });
+
+    const adsAdj = sumRaw(allCsvData.dataAdsAdjustmentsRevenue, 'channelRev');
+    const adsRev = sumRaw(allCsvData.dataAdsRevenue, 'channelRev');
+    const paidFeat = sumRaw(allCsvData.dataPaidFeatures, 'channelRev');
+    const subRed = sumRaw(allCsvData.dataSubscriptionRevenueRed, 'channelRev');
+    const subRedMusic = sumRaw(allCsvData.dataSubscriptionRevenueRedMusic, 'channelRev');
+    const shortsAds = sumRaw(allCsvData.dataYoutubeShortsAds, 'channelRev');
+    const shortsSub = sumRaw(allCsvData.dataYoutubeShortsSubscription, 'channelRev');
+    const customAdj = sumCustomAdj(allCsvData.dataCustomAdjustments);
+    const taxWithheld = sumRaw(allCsvData.dataAffiliatePaymentSummary, 'channelTaxWithheldAmount');
+
+    const totalRevenue = adsAdj + adsRev + paidFeat + subRed + subRedMusic + shortsAds + shortsSub + customAdj;
+
+    console.log(`=== ${prefix} Import Revenue Summary ===`);
+    console.log(`Ads Adjustments Revenue:`, format(adsAdj));
+    console.log(`Ads Revenue:`, format(adsRev));
+    console.log(`Paid Features:`, format(paidFeat));
+    console.log(`Subscription Red:`, format(subRed));
+    console.log(`Subscription Red Music:`, format(subRedMusic));
+    console.log(`Shorts Ads:`, format(shortsAds));
+    console.log(`Shorts Subscription:`, format(shortsSub));
+    console.log(`Custom Adjustments (Deductions):`, format(customAdj));
+    console.log(`Affiliate Payment (Tax Withheld):`, format(taxWithheld));
+    console.log(`---------------------------------------`);
+    console.log(`TOTAL REVENUE:`, format(totalRevenue));
+    console.log("=======================================");
+};
+
 const getAllCsvData = async (values) => {
     const dataAdsAdjustmentsRevenue = await getCsvData(
         values.adsAdjustmentsRevenueFile,
@@ -169,7 +270,7 @@ const getAllCsvData = async (values) => {
             name: CSV_COLUMNS.CHANNEL_DISPLAY_NAME,
             revenue: CSV_COLUMNS.PARTNER_REVENUE,
         },
-        CSV_COLUMNS.CHANNEL_ID
+        CSV_COLUMNS.CHANNEL_ID,
     );
 
     const dataAdsRevenue = await getCsvData(
@@ -179,7 +280,7 @@ const getAllCsvData = async (values) => {
             name: CSV_COLUMNS.CHANNEL_DISPLAY_NAME,
             revenue: CSV_COLUMNS.PARTNER_REVENUE,
         },
-        CSV_COLUMNS.CHANNEL_ID
+        CSV_COLUMNS.CHANNEL_ID,
     );
 
     const dataPaidFeatures = await getCsvData(
@@ -189,7 +290,7 @@ const getAllCsvData = async (values) => {
             name: CSV_COLUMNS.CHANNEL_DISPLAY_NAME,
             revenue: CSV_COLUMNS.EARNINGS,
         },
-        CSV_COLUMNS.CHANNEL_ID
+        CSV_COLUMNS.CHANNEL_ID,
     );
 
     const dataSubscriptionRevenueRed = await getCsvData(
@@ -199,7 +300,7 @@ const getAllCsvData = async (values) => {
             name: CSV_COLUMNS.CHANNEL_DISPLAY_NAME,
             revenue: CSV_COLUMNS.PARTNER_REVENUE,
         },
-        CSV_COLUMNS.CHANNEL_ID
+        CSV_COLUMNS.CHANNEL_ID,
     );
 
     const dataSubscriptionRevenueRedMusic = await getCsvData(
@@ -209,7 +310,7 @@ const getAllCsvData = async (values) => {
             name: CSV_COLUMNS.CHANNEL_DISPLAY_NAME,
             revenue: CSV_COLUMNS.PARTNER_REVENUE,
         },
-        CSV_COLUMNS.CHANNEL_ID
+        CSV_COLUMNS.CHANNEL_ID,
     );
 
     const dataYoutubeShortsAds = await getCsvData(
@@ -219,7 +320,7 @@ const getAllCsvData = async (values) => {
             name: CSV_COLUMNS.CHANNEL_DISPLAY_NAME,
             revenue: CSV_COLUMNS.NET_PARTNER_REVENUE,
         },
-        CSV_COLUMNS.CHANNEL_ID
+        CSV_COLUMNS.CHANNEL_ID,
     );
 
     const dataYoutubeShortsSubscription = await getCsvData(
@@ -229,7 +330,7 @@ const getAllCsvData = async (values) => {
             name: CSV_COLUMNS.CHANNEL_DISPLAY_NAME,
             revenue: CSV_COLUMNS.PARTNER_REVENUE,
         },
-        CSV_COLUMNS.CHANNEL_ID
+        CSV_COLUMNS.CHANNEL_ID,
     );
 
     const dataCustomAdjustments = await getCsvData(
@@ -239,7 +340,7 @@ const getAllCsvData = async (values) => {
             adjustmentType: CSV_COLUMNS.ADJUSTMENT_TYPE,
             deductionAmount: CSV_COLUMNS.DEDUCTION_AMOUNT,
         },
-        CSV_COLUMNS.CHANNEL_ID
+        CSV_COLUMNS.CHANNEL_ID,
     );
 
     const dataAffiliatePaymentSummary = await getCsvData(
@@ -251,7 +352,7 @@ const getAllCsvData = async (values) => {
             taxWithheldAmount: CSV_COLUMNS.TAX_WITHHELD_AMOUNT,
             localCurrency: CSV_COLUMNS.LOCAL_CURRENCY,
         },
-        CSV_COLUMNS.CHANNEL_ID
+        CSV_COLUMNS.CHANNEL_ID,
     );
 
     return {
@@ -360,19 +461,24 @@ const convertTableData = (allCsvData) => {
 
     // Check for Local Currency mismatches across all files
     const nonUsdFiles = new Map(); // using map to avoid duplicates and store currency
-    Object.values(allCsvData).forEach(dataset => {
+    Object.values(allCsvData).forEach((dataset) => {
         if (!dataset) return;
-        dataset.forEach(row => {
-            if (row.channelLocalCurrency && row.channelLocalCurrency !== "USD") {
+        dataset.forEach((row) => {
+            if (
+                row.channelLocalCurrency &&
+                row.channelLocalCurrency !== "USD"
+            ) {
                 nonUsdFiles.set(row.fileName, row.channelLocalCurrency);
             }
         });
     });
 
     if (nonUsdFiles.size > 0) {
-        const fileAlerts = Array.from(nonUsdFiles.entries()).map(([fName, currency]) => {
-            return `<li><strong>${fName}</strong> (Currency: ${currency})</li>`;
-        }).join('');
+        const fileAlerts = Array.from(nonUsdFiles.entries())
+            .map(([fName, currency]) => {
+                return `<li><strong>${fName}</strong> (Currency: ${currency})</li>`;
+            })
+            .join("");
 
         const alertHtml = `
             <div class="alert alert-warning alert-dismissible fade show mb-0" role="alert">
@@ -391,7 +497,7 @@ const convertTableData = (allCsvData) => {
     processRevenueData(
         dataAdsAdjustmentsRevenue,
         TABLE_COLUMNS.REVENUE,
-        tableData
+        tableData,
     );
 
     // Ads Revenue
@@ -404,14 +510,14 @@ const convertTableData = (allCsvData) => {
     processRevenueData(
         dataSubscriptionRevenueRed,
         TABLE_COLUMNS.REVENUE,
-        tableData
+        tableData,
     );
 
     // Subscription Revenue Red Music
     processRevenueData(
         dataSubscriptionRevenueRedMusic,
         TABLE_COLUMNS.REVENUE,
-        tableData
+        tableData,
     );
 
     // YouTube Shorts Ads
@@ -421,7 +527,7 @@ const convertTableData = (allCsvData) => {
     processRevenueData(
         dataYoutubeShortsSubscription,
         TABLE_COLUMNS.REVENUE,
-        tableData
+        tableData,
     );
 
     // Custom Adjustments - Deduction Amount
@@ -444,13 +550,13 @@ const convertTableData = (allCsvData) => {
         return {
             ...value,
             [TABLE_COLUMNS.CHANNEL_LINK]: getYouTubeChannelLink(
-                value[TABLE_COLUMNS.CHANNEL_ID]
+                value[TABLE_COLUMNS.CHANNEL_ID],
             ),
         };
     });
     return result.toSorted(
         (a, b) =>
-            b[TABLE_COLUMNS.TOTAL_REVENUE] - a[TABLE_COLUMNS.TOTAL_REVENUE]
+            b[TABLE_COLUMNS.TOTAL_REVENUE] - a[TABLE_COLUMNS.TOTAL_REVENUE],
     );
 };
 
@@ -468,7 +574,9 @@ const onSubmitManual = async (e) => {
         }
 
         const allCsvData = await getAllCsvData(values);
-        console.log("allCsvData:", allCsvData);
+        console.log("Manual Import Files:", values);
+        logRevenueSummary("Manual", allCsvData);
+        
         const tableData = convertTableData(allCsvData);
 
         resetData(tableData);
@@ -495,38 +603,40 @@ const getFormAutoFiles = () => {
 
     const selectedMonth = $("#month-select").val();
     if (selectedMonth) {
-        fileList = fileList.filter((f) => extractMonthKey(f.name) === selectedMonth);
+        fileList = fileList.filter(
+            (f) => extractMonthKey(f.name) === selectedMonth,
+        );
     }
 
     const youtubeShortsSubscriptionFile = pickBestByRule(
         fileList,
-        RULES.YOUTUBE_SHORTS_SUBSCRIPTION
+        RULES.YOUTUBE_SHORTS_SUBSCRIPTION,
     );
     const youtubeShortsAdsFile = pickBestByRule(
         fileList,
-        RULES.YOUTUBE_SHORTS_ADS
+        RULES.YOUTUBE_SHORTS_ADS,
     );
     const subscriptionRevenueRedMusicFile = pickBestByRule(
         fileList,
-        RULES.SUBSCRIPTION_REVENUE_RED_MUSIC
+        RULES.SUBSCRIPTION_REVENUE_RED_MUSIC,
     );
     const subscriptionRevenueRedFile = pickBestByRule(
         fileList,
-        RULES.SUBSCRIPTION_REVENUE_RED
+        RULES.SUBSCRIPTION_REVENUE_RED,
     );
     const paidFeaturesFile = pickBestByRule(fileList, RULES.PAID_FEATURES);
     const adsAdjustmentsRevenueFile = pickBestByRule(
         fileList,
-        RULES.ADS_ADJUSTMENTS_REVENUE
+        RULES.ADS_ADJUSTMENTS_REVENUE,
     );
     const adsRevenueFile = pickBestByRule(fileList, RULES.ADS_REVENUE);
     const customAdjustmentsFile = pickBestByRule(
         fileList,
-        RULES.CUSTOM_ADJUSMENTS
+        RULES.CUSTOM_ADJUSMENTS,
     );
     const affiliatePaymentSummaryFile = pickBestByRule(
         fileList,
-        RULES.AFFILIATE_PAYMENT_SUMMARY
+        RULES.AFFILIATE_PAYMENT_SUMMARY,
     );
 
     return {
@@ -557,7 +667,9 @@ const onSubmitAuto = async (e) => {
         }
 
         const allCsvData = await getAllCsvData(values);
-        console.log("allCsvData:", allCsvData);
+        console.log("Auto Import Files:", values);
+        logRevenueSummary("Auto", allCsvData);
+        
         const tableData = convertTableData(allCsvData);
 
         resetData(tableData);
