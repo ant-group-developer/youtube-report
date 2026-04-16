@@ -1,5 +1,19 @@
+// Store current files to prevent clearing on cancel
+const currentFiles = {};
+$(document).on("click", 'input[type="file"]', function () {
+    currentFiles[this.id] = this.files;
+});
+
 // Trigger validation on file change and form submit
 $("#csv-form").on("change", 'input[type="file"]', function () {
+    if (
+        this.files.length === 0 &&
+        currentFiles[this.id] &&
+        currentFiles[this.id].length > 0
+    ) {
+        this.files = currentFiles[this.id];
+    }
+
     const inputId = $(this).attr("id");
     const errorId = inputId + "-error"; // Error element id is based on input id
     validateCsvFile(inputId, errorId);
@@ -8,6 +22,14 @@ $("#csv-form").on("change", 'input[type="file"]', function () {
 
 // Scan files when selected for Auto Import
 $("#file-list").on("change", function () {
+    if (
+        this.files.length === 0 &&
+        currentFiles[this.id] &&
+        currentFiles[this.id].length > 0
+    ) {
+        this.files = currentFiles[this.id];
+    }
+
     const files = Array.from(this.files);
     if (files.length === 0) {
         $("#auto-file-details").addClass("d-none");
@@ -18,7 +40,9 @@ $("#file-list").on("change", function () {
     const allRules = Object.values(RULES);
     const months = new Set();
     files.forEach((f) => {
-        const matchesAnyRule = allRules.some((rule) => matchesRule(f.name, rule));
+        const matchesAnyRule = allRules.some((rule) =>
+            matchesRule(f.name, rule),
+        );
         if (!matchesAnyRule) return;
         const key = extractMonthKey(f.name);
         if (key) months.add(key);
@@ -226,26 +250,47 @@ const logRevenueSummary = (prefix, allCsvData) => {
         if (!arr) return 0;
         return arr.reduce((sum, row) => {
             let amount = row.channelDeductionAmount || 0;
-            if (row.channelAdjustmentType === ADJUSTMENT_TYPES.MONETIZATION_DISABLED.VALUE) {
+            if (
+                row.channelAdjustmentType ===
+                ADJUSTMENT_TYPES.MONETIZATION_DISABLED.VALUE
+            ) {
                 amount *= -1;
             }
             return sum + amount;
         }, 0);
     };
 
-    const format = (val) => val.toLocaleString("en-US", { style: "currency", currency: "USD" });
+    const format = (val) =>
+        val.toLocaleString("en-US", { style: "currency", currency: "USD" });
 
-    const adsAdj = sumRaw(allCsvData.dataAdsAdjustmentsRevenue, 'channelRev');
-    const adsRev = sumRaw(allCsvData.dataAdsRevenue, 'channelRev');
-    const paidFeat = sumRaw(allCsvData.dataPaidFeatures, 'channelRev');
-    const subRed = sumRaw(allCsvData.dataSubscriptionRevenueRed, 'channelRev');
-    const subRedMusic = sumRaw(allCsvData.dataSubscriptionRevenueRedMusic, 'channelRev');
-    const shortsAds = sumRaw(allCsvData.dataYoutubeShortsAds, 'channelRev');
-    const shortsSub = sumRaw(allCsvData.dataYoutubeShortsSubscription, 'channelRev');
+    const adsAdj = sumRaw(allCsvData.dataAdsAdjustmentsRevenue, "channelRev");
+    const adsRev = sumRaw(allCsvData.dataAdsRevenue, "channelRev");
+    const paidFeat = sumRaw(allCsvData.dataPaidFeatures, "channelRev");
+    const subRed = sumRaw(allCsvData.dataSubscriptionRevenueRed, "channelRev");
+    const subRedMusic = sumRaw(
+        allCsvData.dataSubscriptionRevenueRedMusic,
+        "channelRev",
+    );
+    const shortsAds = sumRaw(allCsvData.dataYoutubeShortsAds, "channelRev");
+    const shortsSub = sumRaw(
+        allCsvData.dataYoutubeShortsSubscription,
+        "channelRev",
+    );
     const customAdj = sumCustomAdj(allCsvData.dataCustomAdjustments);
-    const taxWithheld = sumRaw(allCsvData.dataAffiliatePaymentSummary, 'channelTaxWithheldAmount');
+    const taxWithheld = sumRaw(
+        allCsvData.dataAffiliatePaymentSummary,
+        "channelTaxWithheldAmount",
+    );
 
-    const totalRevenue = adsAdj + adsRev + paidFeat + subRed + subRedMusic + shortsAds + shortsSub + customAdj;
+    const totalRevenue =
+        adsAdj +
+        adsRev +
+        paidFeat +
+        subRed +
+        subRedMusic +
+        shortsAds +
+        shortsSub +
+        customAdj;
 
     console.log(`=== ${prefix} Import Revenue Summary ===`);
     console.log(`Ads Adjustments Revenue:`, format(adsAdj));
@@ -400,13 +445,13 @@ const processRevenueData = (data, revenueColumn, tableData) => {
 
 const processDeductionData = (data, tableData) => {
     data.forEach((item) => {
-        const { channelId, channelAdjustmentType, channelDeductionAmount } =
+        const { channelId, channelName, channelAdjustmentType, channelDeductionAmount } =
             item;
         let value = tableData.get(channelId);
         let deductionAmount = channelDeductionAmount;
 
         if (!value) {
-            value = getNewCellData(channelId, "");
+            value = getNewCellData(channelId, channelName);
         }
 
         if (
@@ -421,6 +466,8 @@ const processDeductionData = (data, tableData) => {
 
         value[TABLE_COLUMNS.NOTE] = channelAdjustmentType;
         value[TABLE_COLUMNS.DEDUCTION_AMOUNT] += deductionAmount;
+
+        tableData.set(channelId, value);
     });
 };
 
@@ -428,6 +475,7 @@ const processAffiliatePaymentData = (data, tableData) => {
     data.forEach((item) => {
         const {
             channelId,
+            channelName,
             channelUsSourcedRevenue,
             channelTaxWithholdingRate,
             channelTaxWithheldAmount,
@@ -437,12 +485,14 @@ const processAffiliatePaymentData = (data, tableData) => {
         let value = tableData.get(channelId);
 
         if (!value) {
-            value = getNewCellData(channelId, "");
+            value = getNewCellData(channelId, channelName);
         }
 
         value[TABLE_COLUMNS.US_REVENUE] += channelUsSourcedRevenue;
         value[TABLE_COLUMNS.TAX_WITHHOLDING_RATE] = channelTaxWithholdingRate;
         value[TABLE_COLUMNS.TAX_WITHHELD_AMOUNT] += channelTaxWithheldAmount;
+
+        tableData.set(channelId, value);
     });
 };
 
@@ -576,7 +626,7 @@ const onSubmitManual = async (e) => {
         const allCsvData = await getAllCsvData(values);
         console.log("Manual Import Files:", values);
         logRevenueSummary("Manual", allCsvData);
-        
+
         const tableData = convertTableData(allCsvData);
 
         resetData(tableData);
@@ -669,7 +719,7 @@ const onSubmitAuto = async (e) => {
         const allCsvData = await getAllCsvData(values);
         console.log("Auto Import Files:", values);
         logRevenueSummary("Auto", allCsvData);
-        
+
         const tableData = convertTableData(allCsvData);
 
         resetData(tableData);
