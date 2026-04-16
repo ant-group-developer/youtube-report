@@ -13,7 +13,9 @@ A client-side web application for importing, aggregating, and analyzing YouTube 
 
 ## Features
 
-- **Auto Import Data**: Upload a batch of YouTube report CSVs and let the system automatically detect file types based on naming rules.
+- **Auto Import Data**: Select a folder containing YouTube reports. The system automatically scans for `.csv` files and assigns them to the correct report type based on our parsing rules.
+- **In-Memory ZIP Extraction**: Automatically detects `.zip` and `.csv.zip` packages provided by YouTube. It efficiently evaluates their internal files, reads matching reports directly into memory, and instantly skips irrelevant large files—all without unzipping anything to your disk.
+- **Unused File Management**: Detects duplicate or junk CSV files sitting unused in your local folder, allowing you to bulk delete them straight from the UI to free up space.
 - **Manual Import Data**: Manually classify and upload specific CSVs (Ads Revenue, Paid Features, Subscription Red, YouTube Shorts, etc.).
 - **Revenue Aggregation**: Automatically aggregates channel earnings, US-sourced revenue, tax withholdings, adjustments, and deductions.
 - **Search and Pagination**: Quickly find specific channels using the search bar and navigate through large datasets with built-in pagination.
@@ -36,6 +38,7 @@ Since this is a vanilla JS application running locally, there are no environment
   - [Bootstrap 5.3.7](https://getbootstrap.com/docs/5.3/getting-started/introduction/) for styling.
   - [jQuery 3.7.1](https://jquery.com/) for DOM manipulation.
   - [PapaParse 5.4.1](https://www.papaparse.com/) for fast CSV parsing in-browser.
+  - [JSZip 3.10.1](https://stuk.github.io/jszip/) for reading and unpacking YouTube's zip packages seamlessly in-memory.
   - [ExcelJS 4.4.0](https://github.com/exceljs/exceljs) for generating Excel export files.
 
 ## License
