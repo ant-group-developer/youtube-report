@@ -30,7 +30,7 @@ The system categorizes uploaded files into different revenue types to map them c
 ### File Handling & ZIP Extraction Logic
 
 When using the **Select Folder** (Auto Import) mode:
-1. **File System Access API**: Reads all `.csv` files natively from the chosen local directory. This provides disk-level operations such as bulk-deleting unrecognized files directly from the browser UI.
+1. **File System Access API**: Reads all files natively from the chosen local directory. This enables accurate disk-level tracking, identifying any `.csv` or `.zip` files that yielded no matching reports so users can bulk-delete "junk" files directly from the browser UI.
 2. **In-Memory Decompression**: Uses `JSZip` to process `.zip` and `.csv.zip` files. It evaluates the inner filenames, matches them against the regex `RULES`, and unpacks necessary reports transparently into memory as virtual `File` objects.
 3. **Ultra-Optimization**: Since YouTube analytics sometimes downloads immense video-level reports (up to ~750MB unpacked), the system leverages string-matching on `.csv.zip` outer filenames. Huge irrelevant packages are completely skipped by `JSZip`, drastically saving client CPU and Memory.
 
