@@ -37,11 +37,50 @@ $("#btn-select-folder").on("click", async function () {
         folderFiles = [];
         
         for await (const entry of dirHandle.values()) {
-            if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.csv')) {
-                folderFileHandles.push(entry);
-                const file = await entry.getFile();
-                file.handle = entry; // Store handle to allow deletion
-                folderFiles.push(file);
+            if (entry.kind === 'file') {
+                const lowerName = entry.name.toLowerCase();
+                if (lowerName.endsWith('.csv')) {
+                    folderFileHandles.push(entry);
+                    const file = await entry.getFile();
+                    file.handle = entry; // Store handle to allow deletion
+                    folderFiles.push(file);
+                } else if (lowerName.endsWith('.zip')) {
+                    // Ultra-Optimization: Since YouTube delivers 'report.csv.zip', 
+                    // we check if the zip filename itself matches a rule (minus .zip).
+                    // If it doesn't match, we completely SKIP opening the zip, saving massive CPU/RAM.
+                    if (lowerName.endsWith('.csv.zip')) {
+                        const possibleCsvName = entry.name.replace(/\.zip$/i, '');
+                        const allRules = Object.values(RULES);
+                        if (!allRules.some(rule => matchesRule(possibleCsvName, rule))) {
+                            continue; // Skip irrelevant files entirely
+                        }
+                    }
+
+                    try {
+                        const zipFile = await entry.getFile();
+                        const zip = await JSZip.loadAsync(zipFile);
+                        
+                        // Optimization: Pre-fetch all rules to check if we should even bother extracting
+                        const allRules = Object.values(RULES);
+                        
+                        for (const [relativePath, zipEntry] of Object.entries(zip.files)) {
+                            if (!zipEntry.dir && relativePath.toLowerCase().endsWith('.csv')) {
+                                
+                                // Optimization: Only extract if it matches one of our 9 required rules.
+                                // This prevents massive 500MB+ video-level CSVs from destroying browser memory.
+                                const isNeeded = allRules.some(rule => matchesRule(zipEntry.name, rule));
+                                
+                                if (isNeeded) {
+                                    const blob = await zipEntry.async("blob");
+                                    const innerFile = new File([blob], zipEntry.name, { type: "text/csv" });
+                                    folderFiles.push(innerFile);
+                                }
+                            }
+                        }
+                    } catch (zipErr) {
+                        console.error("Failed to extract zip:", entry.name, zipErr);
+                    }
+                }
             }
         }
         
@@ -193,7 +232,8 @@ $("#month-select").on("change", function () {
 
     // Determine universally unused files: files that DO NOT match ANY rule in our configuration
     const allRules = Object.values(RULES);
-    const unusedFiles = folderFiles.filter(f => !allRules.some(rule => matchesRule(f.name, rule)));
+    // Only detect unused files that exist on disk (have f.handle), ignoring virtual extracted zip files
+    const unusedFiles = folderFiles.filter(f => f.handle && !allRules.some(rule => matchesRule(f.name, rule)));
     const unusedFilesListContainer = $("#unused-files-list");
     unusedFilesListContainer.empty();
 

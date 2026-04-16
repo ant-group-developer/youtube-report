@@ -52,8 +52,8 @@ const RULES = {
     },
 
     PAID_FEATURES: {
-        requiredAny: [/paid_features[_-]m_/i], // khớp cả ...Ecommerce_paid_features_M_...
-        forbidden: [, /(?:^|[_-])week(?:[_-]|$)/i, /(?:^|[_-])day(?:[_-]|$)/i],
+        requiredAny: [/paid_features_month_paid_features/i, /paid_features[_-]m_/i],
+        forbidden: [/(?:^|[_-])week(?:[_-]|$)/i, /(?:^|[_-])day(?:[_-]|$)/i],
     },
 
     ADS_ADJUSTMENTS_REVENUE: {
