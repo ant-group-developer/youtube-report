@@ -21,16 +21,43 @@ $("#csv-form").on("change", 'input[type="file"]', function () {
 });
 
 // Scan files when selected for Auto Import
-$("#file-list").on("change", function () {
-    if (
-        this.files.length === 0 &&
-        currentFiles[this.id] &&
-        currentFiles[this.id].length > 0
-    ) {
-        this.files = currentFiles[this.id];
-    }
+let currentDirectoryHandle = null;
+let folderFileHandles = [];
+let folderFiles = [];
 
-    const files = Array.from(this.files);
+$("#btn-select-folder").on("click", async function () {
+    try {
+        const dirHandle = await window.showDirectoryPicker({
+            id: 'youtube-report-folder',
+            mode: 'readwrite'
+        });
+        currentDirectoryHandle = dirHandle;
+        
+        folderFileHandles = [];
+        folderFiles = [];
+        
+        for await (const entry of dirHandle.values()) {
+            if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.csv')) {
+                folderFileHandles.push(entry);
+                const file = await entry.getFile();
+                file.handle = entry; // Store handle to allow deletion
+                folderFiles.push(file);
+            }
+        }
+        
+        $("#folder-path").text(`Selected folder: ${dirHandle.name} (${folderFiles.length} CSV files found)`);
+        $("#file-list-error").text("");
+        
+        processFolderFiles(folderFiles);
+    } catch (err) {
+        if (err.name !== 'AbortError') {
+            console.error(err);
+            $("#file-list-error").text("Error accessing folder. Or browser does not support this feature.");
+        }
+    }
+});
+
+function processFolderFiles(files) {
     if (files.length === 0) {
         $("#auto-file-details").addClass("d-none");
         return;
@@ -66,7 +93,7 @@ $("#file-list").on("change", function () {
     } else {
         $("#auto-file-details").addClass("d-none");
     }
-});
+}
 
 // Update preview list on month select
 $("#month-select").on("change", function () {
@@ -163,6 +190,86 @@ $("#month-select").on("change", function () {
             );
         }
     });
+
+    // Determine universally unused files: files that DO NOT match ANY rule in our configuration
+    const allRules = Object.values(RULES);
+    const unusedFiles = folderFiles.filter(f => !allRules.some(rule => matchesRule(f.name, rule)));
+    const unusedFilesListContainer = $("#unused-files-list");
+    unusedFilesListContainer.empty();
+
+    if (unusedFiles.length > 0) {
+        $("#unused-files-section").removeClass("d-none");
+        $("#unused-files-count").text(unusedFiles.length);
+        unusedFiles.forEach(f => {
+            const li = $(`<li class="list-group-item list-group-item-danger py-1 d-flex justify-content-between align-items-center" style="font-size: 0.85em;">
+                <span>${f.name}</span>
+                <button type="button" class="btn btn-danger btn-sm py-0 px-2 delete-single-file-btn" data-filename="${f.name}" title="Delete file">
+                    <i class="bi bi-trash"></i> Delete
+                </button>
+            </li>`);
+            unusedFilesListContainer.append(li);
+        });
+
+        // Individual delete handlers
+        unusedFilesListContainer.off("click", ".delete-single-file-btn").on("click", ".delete-single-file-btn", async function() {
+            const fileName = $(this).data("filename");
+            if (!confirm(`Permanently delete '${fileName}' from your local folder? This cannot be undone.`)) {
+                return;
+            }
+            const fileObj = unusedFiles.find(file => file.name === fileName);
+            if (fileObj && fileObj.handle && currentDirectoryHandle) {
+                try {
+                    await currentDirectoryHandle.removeEntry(fileName);
+                    
+                    // Remove from our internal array
+                    folderFiles = folderFiles.filter(file => file.name !== fileName);
+                    
+                    // Remove the li from UI
+                    $(this).closest('li').remove();
+                    
+                    // Update count
+                    $("#unused-files-count").text(unusedFilesListContainer.children().length);
+
+                    // If no more unused files, hide section
+                    if (unusedFilesListContainer.children().length === 0) {
+                        $("#unused-files-section").addClass("d-none");
+                    }
+                } catch (e) {
+                    console.error("Failed to delete", fileName, e);
+                    alert("Failed to delete file from disk. Ensure the file isn't open in another program.");
+                }
+            }
+        });
+
+        // Bulk delete handler
+        $("#btn-delete-all-unused").off("click").on("click", async function() {
+            if (!confirm(`Are you sure you want to permanently delete ALL ${unusedFiles.length} unused CSV files from your local folder? This cannot be undone.`)) {
+                return;
+            }
+            let deletedCount = 0;
+            for (const f of unusedFiles) {
+                if (f.handle && currentDirectoryHandle) {
+                    try {
+                        await currentDirectoryHandle.removeEntry(f.name);
+                        deletedCount++;
+                    } catch (e) {
+                        console.error("Failed to delete", f.name, e);
+                    }
+                }
+            }
+            alert(`Successfully deleted ${deletedCount} file(s).`);
+            
+            // Remove deleted files from our internal state
+            const unusedFileNames = unusedFiles.map(f => f.name);
+            folderFiles = folderFiles.filter(file => !unusedFileNames.includes(file.name));
+            
+            // Trigger UI update
+            $("#unused-files-section").addClass("d-none");
+            processFolderFiles(folderFiles);
+        });
+    } else {
+        $("#unused-files-section").addClass("d-none");
+    }
 });
 
 const getFormManualFiles = () => {
@@ -646,10 +753,9 @@ submitManualBtn.on("click", onSubmitManual);
 
 // Auto Submit
 const getFormAutoFiles = () => {
-    const input = $("#file-list")[0];
-    if (!input || !input.files || input.files.length === 0) return;
+    if (!folderFiles || folderFiles.length === 0) return;
 
-    let fileList = Array.from(input.files);
+    let fileList = folderFiles;
 
     const selectedMonth = $("#month-select").val();
     if (selectedMonth) {
