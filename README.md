@@ -15,7 +15,7 @@ A client-side web application for importing, aggregating, and analyzing YouTube 
 
 - **Auto Import Data**: Select a folder containing YouTube reports. The system automatically scans for `.csv` files and assigns them to the correct report type based on our parsing rules.
 - **In-Memory ZIP Extraction**: Automatically detects `.zip` and `.csv.zip` packages provided by YouTube. It efficiently evaluates their internal files, reads matching reports directly into memory, and instantly skips irrelevant large files—all without unzipping anything to your disk.
-- **Unused File Management**: Detects duplicate or junk `.csv` and `.zip` files sitting unused in your local folder, allowing you to bulk delete them straight from the UI to free up space.
+- **Unused File Management**: Detects duplicate or junk `.csv` and `.zip` files sitting unused in your local folder, allowing you to individually or bulk delete them straight from the UI to free up space.
 - **Manual Import Data**: Manually classify and upload specific CSVs (Ads Revenue, Paid Features, Subscription Red, YouTube Shorts, etc.).
 - **Revenue Aggregation**: Automatically aggregates channel earnings, US-sourced revenue, tax withholdings, adjustments, and deductions.
 - **Search and Pagination**: Quickly find specific channels using the search bar and navigate through large datasets with built-in pagination.

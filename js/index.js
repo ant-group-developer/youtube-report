@@ -25,6 +25,70 @@ let currentDirectoryHandle = null;
 let allDiskFiles = [];
 let folderFiles = [];
 
+async function scanDirectory(dirHandle) {
+    allDiskFiles = [];
+    folderFiles = [];
+    const allRules = Object.values(RULES);
+    
+    for await (const entry of dirHandle.values()) {
+        if (entry.kind === 'file') {
+            const lowerName = entry.name.toLowerCase();
+            
+            // Track physical files to allow deleting completely unneeded ones (both csv and zip)
+            const diskItem = { name: entry.name, handle: entry, isUsed: false };
+            allDiskFiles.push(diskItem);
+
+            if (lowerName.endsWith('.csv')) {
+                if (allRules.some(rule => matchesRule(entry.name, rule))) {
+                    diskItem.isUsed = true;
+                    const file = await entry.getFile();
+                    // We don't set file.handle anymore because deletion ignores folderFiles
+                    folderFiles.push(file);
+                }
+            } else if (lowerName.endsWith('.zip')) {
+                // Ultra-Optimization: Since YouTube delivers 'report.csv.zip', 
+                // we check if the zip filename itself matches a rule (minus .zip).
+                // If it doesn't match, we completely SKIP opening the zip, saving massive CPU/RAM.
+                if (lowerName.endsWith('.csv.zip')) {
+                    const possibleCsvName = entry.name.replace(/\.zip$/i, '');
+                    if (!allRules.some(rule => matchesRule(possibleCsvName, rule))) {
+                        continue; // Skip irrelevant files entirely, marking zip as completely unused
+                    }
+                }
+
+                let zipUseful = false;
+                try {
+                    const zipFile = await entry.getFile();
+                    const zip = await JSZip.loadAsync(zipFile);
+                    
+                    for (const [relativePath, zipEntry] of Object.entries(zip.files)) {
+                        if (!zipEntry.dir && relativePath.toLowerCase().endsWith('.csv')) {
+                            
+                            const isNeeded = allRules.some(rule => matchesRule(zipEntry.name, rule));
+                            
+                            if (isNeeded) {
+                                zipUseful = true;
+                                const blob = await zipEntry.async("blob");
+                                const innerFile = new File([blob], zipEntry.name, { type: "text/csv" });
+                                folderFiles.push(innerFile);
+                            }
+                        }
+                    }
+                } catch (zipErr) {
+                    console.error("Failed to extract zip:", entry.name, zipErr);
+                }
+                
+                diskItem.isUsed = zipUseful;
+            }
+        }
+    }
+    
+    $("#folder-path").text(`Selected folder: ${dirHandle.name} (${folderFiles.length} CSV files found)`);
+    $("#file-list-error").text("");
+    
+    processFolderFiles(folderFiles);
+}
+
 $("#btn-select-folder").on("click", async function () {
     try {
         const dirHandle = await window.showDirectoryPicker({
@@ -33,67 +97,7 @@ $("#btn-select-folder").on("click", async function () {
         });
         currentDirectoryHandle = dirHandle;
         
-        allDiskFiles = [];
-        folderFiles = [];
-        const allRules = Object.values(RULES);
-        
-        for await (const entry of dirHandle.values()) {
-            if (entry.kind === 'file') {
-                const lowerName = entry.name.toLowerCase();
-                
-                // Track physical files to allow deleting completely unneeded ones (both csv and zip)
-                const diskItem = { name: entry.name, handle: entry, isUsed: false };
-                allDiskFiles.push(diskItem);
-
-                if (lowerName.endsWith('.csv')) {
-                    if (allRules.some(rule => matchesRule(entry.name, rule))) {
-                        diskItem.isUsed = true;
-                    }
-                    const file = await entry.getFile();
-                    // We don't set file.handle anymore because deletion ignores folderFiles
-                    folderFiles.push(file);
-                } else if (lowerName.endsWith('.zip')) {
-                    // Ultra-Optimization: Since YouTube delivers 'report.csv.zip', 
-                    // we check if the zip filename itself matches a rule (minus .zip).
-                    // If it doesn't match, we completely SKIP opening the zip, saving massive CPU/RAM.
-                    if (lowerName.endsWith('.csv.zip')) {
-                        const possibleCsvName = entry.name.replace(/\.zip$/i, '');
-                        if (!allRules.some(rule => matchesRule(possibleCsvName, rule))) {
-                            continue; // Skip irrelevant files entirely, marking zip as completely unused
-                        }
-                    }
-
-                    let zipUseful = false;
-                    try {
-                        const zipFile = await entry.getFile();
-                        const zip = await JSZip.loadAsync(zipFile);
-                        
-                        for (const [relativePath, zipEntry] of Object.entries(zip.files)) {
-                            if (!zipEntry.dir && relativePath.toLowerCase().endsWith('.csv')) {
-                                
-                                const isNeeded = allRules.some(rule => matchesRule(zipEntry.name, rule));
-                                
-                                if (isNeeded) {
-                                    zipUseful = true;
-                                    const blob = await zipEntry.async("blob");
-                                    const innerFile = new File([blob], zipEntry.name, { type: "text/csv" });
-                                    folderFiles.push(innerFile);
-                                }
-                            }
-                        }
-                    } catch (zipErr) {
-                        console.error("Failed to extract zip:", entry.name, zipErr);
-                    }
-                    
-                    diskItem.isUsed = zipUseful;
-                }
-            }
-        }
-        
-        $("#folder-path").text(`Selected folder: ${dirHandle.name} (${folderFiles.length} CSV files found)`);
-        $("#file-list-error").text("");
-        
-        processFolderFiles(folderFiles);
+        await scanDirectory(currentDirectoryHandle);
     } catch (err) {
         if (err.name !== 'AbortError') {
             console.error(err);
@@ -257,11 +261,13 @@ $("#month-select").on("change", function () {
 
         // Individual delete handlers
         unusedFilesListContainer.off("click", ".delete-single-file-btn").on("click", ".delete-single-file-btn", async function() {
-            const fileName = $(this).data("filename");
+            const fileName = $(this).attr("data-filename");
             if (!confirm(`Permanently delete '${fileName}' from your local folder? This cannot be undone.`)) {
                 return;
             }
             const fileObj = unusedFiles.find(file => file.name === fileName);
+            const $li = $(this).closest('li');
+            
             if (fileObj && fileObj.handle && currentDirectoryHandle) {
                 try {
                     await currentDirectoryHandle.removeEntry(fileName);
@@ -269,19 +275,24 @@ $("#month-select").on("change", function () {
                     // Remove from our internal array
                     allDiskFiles = allDiskFiles.filter(file => file.name !== fileName);
                     
-                    // Remove the li from UI
-                    $(this).closest('li').remove();
+                    // Remove the li from UI for immediate feedback
+                    $li.remove();
                     
-                    // Update count
-                    $("#unused-files-count").text(unusedFilesListContainer.children().length);
-
-                    // If no more unused files, hide section
-                    if (unusedFilesListContainer.children().length === 0) {
-                        $("#unused-files-section").addClass("d-none");
+                    // Trigger a full reload of the folder to ensure internal states stay 100% in sync
+                    if (currentDirectoryHandle) {
+                        await scanDirectory(currentDirectoryHandle);
                     }
                 } catch (e) {
-                    console.error("Failed to delete", fileName, e);
-                    alert("Failed to delete file from disk. Ensure the file isn't open in another program.");
+                    if (e.name === "NotFoundError" || (e.message && e.message.toLowerCase().includes("not found"))) {
+                        console.warn("File was already deleted or doesn't exist", fileName);
+                        $li.remove();
+                        if (currentDirectoryHandle) {
+                            await scanDirectory(currentDirectoryHandle);
+                        }
+                    } else {
+                        console.error("Failed to delete", fileName, e);
+                        alert("Failed to delete file from disk. Ensure the file isn't open in another program.");
+                    }
                 }
             }
         });
@@ -304,13 +315,10 @@ $("#month-select").on("change", function () {
             }
             alert(`Successfully deleted ${deletedCount} file(s).`);
             
-            // Remove deleted files from our internal state
-            const unusedFileNames = unusedFiles.map(f => f.name);
-            folderFiles = folderFiles.filter(file => !unusedFileNames.includes(file.name));
-            
-            // Trigger UI update
-            $("#unused-files-section").addClass("d-none");
-            processFolderFiles(folderFiles);
+            // Reload folder fully to ensure UI and internal state reflects the new reality
+            if (currentDirectoryHandle) {
+                await scanDirectory(currentDirectoryHandle);
+            }
         });
     } else {
         $("#unused-files-section").addClass("d-none");
