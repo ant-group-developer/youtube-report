@@ -346,10 +346,26 @@ const parseVersionWeight = (name) => {
 };
 
 const parseNewestDateKey = (name) => {
-    // Bắt mọi cụm YYYYMMDD và lấy lớn nhất (ví dụ: 20250531, 20250701)
-    const dates = name.match(/20\d{6}/g);
-    if (!dates) return -1;
-    return Math.max(...dates.map((d) => parseInt(d, 10)));
+    // Bắt mọi cụm YYYYMMDD (8 chữ số) và lấy lớn nhất
+    const dates8 = name.match(/20\d{6}/g) || [];
+
+    // Bắt cụm YYYYMM (6 chữ số) đứng giữa dấu _ hoặc đầu/cuối,
+    // nhưng KHÔNG phải là phần đầu của cụm 8 chữ số đã bắt ở trên.
+    // Ví dụ: "202606" trong YouTube_BugTV_2_M_202606_affiliate_...
+    const dates6 = [];
+    const re6 = /(?:^|_)(20\d{4})(?=_|$)/g;
+    let m;
+    while ((m = re6.exec(name)) !== null) {
+        const candidate = m[1];
+        // Bỏ qua nếu đây thực ra là phần đầu của cụm YYYYMMDD
+        if (!dates8.some((d8) => d8.startsWith(candidate) && d8 !== candidate)) {
+            dates6.push(candidate + "01"); // Chuyển YYYYMM → YYYYMM01
+        }
+    }
+
+    const allDates = [...dates8, ...dates6];
+    if (allDates.length === 0) return -1;
+    return Math.max(...allDates.map((d) => parseInt(d, 10)));
 };
 
 const extractMonthKey = (name) => {
