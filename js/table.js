@@ -12,10 +12,20 @@ const getDataPaginated = (data, page) => {
 };
 
 // Hàm highlightText để làm nổi bật các từ khóa trùng khớp mà không phân biệt chữ hoa/thường
+// Trả về HTML đã escape, an toàn để chèn vào bảng
 const highlightText = (text, searchTerm) => {
-    if (!searchTerm) return text; // Nếu không có từ khóa tìm kiếm, trả lại văn bản gốc
-    const regex = new RegExp(`(${searchTerm})`, "gi"); // Tạo biểu thức chính quy không phân biệt hoa thường
-    return text.replace(regex, '<span class="highlight">$1</span>'); // Bao quanh từ trùng khớp với thẻ <span>
+    const raw = String(text ?? "");
+    if (!searchTerm) return escapeHtml(raw); // Nếu không có từ khóa tìm kiếm, trả lại văn bản gốc
+    const regex = new RegExp(`(${escapeRegExp(searchTerm)})`, "gi"); // Tạo biểu thức chính quy không phân biệt hoa thường
+    // split với capture group: phần tử lẻ là đoạn trùng khớp
+    return raw
+        .split(regex)
+        .map((part, i) =>
+            i % 2 === 1
+                ? `<span class="highlight">${escapeHtml(part)}</span>`
+                : escapeHtml(part),
+        )
+        .join("");
 };
 
 const renderTable = (data, searchTerm = "") => {
@@ -34,7 +44,7 @@ const renderTable = (data, searchTerm = "") => {
 
     const tableBodyContent = data.map((item) => {
         const uc = item[TABLE_COLUMNS.CHANNEL_ID];
-        const link = item[TABLE_COLUMNS.CHANNEL_LINK];
+        const link = escapeHtml(item[TABLE_COLUMNS.CHANNEL_LINK]);
 
         // Highlight the matching terms in each column (convert to lowercase for comparison)
         const name = highlightText(
@@ -78,11 +88,11 @@ const renderTable = (data, searchTerm = "") => {
         }
 
         return `<tr>
-                <td data-field="Channel ID" title="${uc}" class="${className}">
+                <td data-field="Channel ID" title="${escapeHtml(uc)}" class="${className}">
                     ${highlightText(uc, searchTerm)}
                 </td>
                 <td data-field="Name" class="${className}">
-                    <a href="${link}" target="_blank">
+                    <a href="${link}" target="_blank" rel="noopener noreferrer">
                         ${name}
                     </a>
                 </td>
@@ -98,14 +108,14 @@ const renderTable = (data, searchTerm = "") => {
                 <td data-field="Revenue" class="${className}">
                     ${revenue}
                 </td>
-                <td data-field="Deduction Amount" title="${note}" class="${className}">
+                <td data-field="Deduction Amount" title="${escapeHtml(note)}" class="${className}">
                     ${deductionAmount}
                 </td>
                 <td data-field="Total Revenue" class="${className}">
                     ${totalRevenue}
                 </td>
                 <td data-field="Note" class="${className}">
-                    ${note}
+                    ${escapeHtml(note)}
                 </td>
             </tr>`;
     });

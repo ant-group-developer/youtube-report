@@ -33,7 +33,10 @@ async function scanDirectory(dirHandle) {
     for await (const entry of dirHandle.values()) {
         if (entry.kind === 'file') {
             const lowerName = entry.name.toLowerCase();
-            
+
+            // Only csv/zip are report files; anything else (xlsx, pdf...) is never listed or deleted
+            if (!lowerName.endsWith('.csv') && !lowerName.endsWith('.zip')) continue;
+
             // Track physical files to allow deleting completely unneeded ones (both csv and zip)
             const diskItem = { name: entry.name, handle: entry, isUsed: false };
             allDiskFiles.push(diskItem);
@@ -231,7 +234,7 @@ $("#month-select").on("change", function () {
 
         if (item.file) {
             processedList.append(
-                `<li class="list-group-item text-success"><i class="bi bi-check-circle-fill me-2"></i><strong>${item.label}:</strong> <span class="text-dark">${item.file.name}</span>${ruleHtml}</li>`,
+                `<li class="list-group-item text-success"><i class="bi bi-check-circle-fill me-2"></i><strong>${item.label}:</strong> <span class="text-dark">${escapeHtml(item.file.name)}</span>${ruleHtml}</li>`,
             );
         } else {
             processedList.append(
@@ -251,8 +254,8 @@ $("#month-select").on("change", function () {
         $("#unused-files-count").text(unusedFiles.length);
         unusedFiles.forEach(f => {
             const li = $(`<li class="list-group-item list-group-item-danger py-1 d-flex justify-content-between align-items-center" style="font-size: 0.85em;">
-                <span>${f.name}</span>
-                <button type="button" class="btn btn-danger btn-sm py-0 px-2 delete-single-file-btn" data-filename="${f.name}" title="Delete file">
+                <span>${escapeHtml(f.name)}</span>
+                <button type="button" class="btn btn-danger btn-sm py-0 px-2 delete-single-file-btn" data-filename="${escapeHtml(f.name)}" title="Delete file">
                     <i class="bi bi-trash"></i> Delete
                 </button>
             </li>`);
@@ -384,6 +387,14 @@ const getFormManualFiles = () => {
         "youtube-shorts-subscription",
         "youtube-shorts-subscription-error",
     );
+    const customAdjustmentsFile = validateFile(
+        "custom-adjustments",
+        "custom-adjustments-error",
+    );
+    const affiliatePaymentSummaryFile = validateFile(
+        "affiliate-payment-summary",
+        "affiliate-payment-summary-error",
+    );
 
     if (!validateSuccess) {
         return;
@@ -397,6 +408,8 @@ const getFormManualFiles = () => {
         subscriptionRevenueRedMusicFile,
         youtubeShortsAdsFile,
         youtubeShortsSubscriptionFile,
+        customAdjustmentsFile,
+        affiliatePaymentSummaryFile,
     };
 };
 
@@ -686,7 +699,7 @@ const convertTableData = (allCsvData) => {
     if (nonUsdFiles.size > 0) {
         const fileAlerts = Array.from(nonUsdFiles.entries())
             .map(([fName, currency]) => {
-                return `<li><strong>${fName}</strong> (Currency: ${currency})</li>`;
+                return `<li><strong>${escapeHtml(fName)}</strong> (Currency: ${escapeHtml(currency)})</li>`;
             })
             .join("");
 

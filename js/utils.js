@@ -1,5 +1,17 @@
 const getYouTubeChannelLink = (uc) => `https://www.youtube.com/channel/${uc}`;
 
+// Escape dữ liệu từ CSV / tên file trước khi chèn vào HTML
+const escapeHtml = (value) =>
+    String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+
+// Escape ký tự đặc biệt để dùng chuỗi người dùng nhập trong RegExp
+const escapeRegExp = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const getSubmitBtn = (buttonId) => $(`#${buttonId}`);
 
 const showLoading = (buttonId) => {
@@ -35,6 +47,9 @@ const exportExcel = (data) => {
     }));
     const columnAlignMap = Object.fromEntries(
         EXCEL_COLUMNS.map((col) => [col.key, col.align ?? "left"]),
+    );
+    const columnNumFmtMap = Object.fromEntries(
+        EXCEL_COLUMNS.filter((col) => col.numFmt).map((col) => [col.key, col.numFmt]),
     );
 
     const headerRowNumber = 1;
@@ -72,9 +87,12 @@ const exportExcel = (data) => {
         const rowData = { stt: index + 1 };
         EXCEL_COLUMNS.forEach((col) => {
             const rawValue = record[col.key];
-            rowData[col.key] = col.format
-                ? col.format(rawValue, record)
-                : rawValue;
+            let value = col.format ? col.format(rawValue, record) : rawValue;
+            // Cột số: ghi dạng number (dữ liệu bảng là chuỗi từ toFixed) để Excel tính toán được
+            if (col.numFmt && value !== "" && value !== null && !isNaN(Number(value))) {
+                value = Number(value);
+            }
+            rowData[col.key] = value;
         });
         worksheet.insertRow(index + startDataRow, rowData);
     });
@@ -84,12 +102,11 @@ const exportExcel = (data) => {
         if (rowNumber <= headerRowNumber) return; // Bỏ dòng trước Header
 
         if (row.values.includes(ADJUSTMENT_TYPES.CREDIT_APPEAL.VALUE)) {
-            console.log(1);
             row.font = { name: "Arial", size: 12, color: { argb: "FFFFFFFF" } };
             row.fill = {
                 type: "pattern",
                 pattern: "solid",
-                fgColor: { argb: "198754" },
+                fgColor: { argb: "FF198754" },
             };
         } else if (
             row.values.includes(ADJUSTMENT_TYPES.MONETIZATION_DISABLED.VALUE)
@@ -98,7 +115,7 @@ const exportExcel = (data) => {
             row.fill = {
                 type: "pattern",
                 pattern: "solid",
-                fgColor: { argb: "dc3545" },
+                fgColor: { argb: "FFDC3545" },
             };
         } else {
             row.font = { name: "Arial", size: 12 };
@@ -114,6 +131,9 @@ const exportExcel = (data) => {
             };
 
             const key = worksheet.getColumn(colNumber).key?.toString();
+            if (key && columnNumFmtMap[key] && typeof cell.value === "number") {
+                cell.numFmt = columnNumFmtMap[key];
+            }
             if (key && columnAlignMap[key]) {
                 cell.alignment = {
                     vertical: "middle",
