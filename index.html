@@ -29,15 +29,13 @@
                         </span>
                         <input id="search" class="form-control" type="text" placeholder="Search...">
                     </div>
+                    <!-- Ẩn kênh có Total Revenue = 0 (áp dụng cho bảng và file Excel) -->
+                    <div class="form-check text-nowrap ms-2 mb-0">
+                        <input id="hide-zero-revenue" class="form-check-input" type="checkbox">
+                        <label class="form-check-label" for="hide-zero-revenue">Hide channels without revenue</label>
+                    </div>
                 </div>
                 <div class="d-flex gap-2">
-                    <!-- Số chữ số thập phân của số tiền trên bảng và trong file Excel (xem DECIMAL_PLACES) -->
-                    <div class="input-group flex-nowrap w-auto"
-                        title="Round amounts in the table and the Excel export to this many decimal places">
-                        <label class="input-group-text" for="decimal-places">Decimal places</label>
-                        <input id="decimal-places" class="form-control" type="number" min="0" max="12" step="1"
-                            value="2" style="width: 70px;">
-                    </div>
                     <button type="button" id="export" class="btn btn-primary">
                         <i class="bi bi-filetype-xlsx"></i>
                         Export Excel
@@ -164,15 +162,21 @@
                                     <ul id="processed-files-list" class="list-group">
                                     </ul>
                                 </div>
+                                <!-- Thu gọn mặc định: danh sách có thể dài (file tuần...) và có nút xoá file khỏi máy -->
                                 <div class="col-12 mt-4 d-none" id="unused-files-section">
-                                    <div class="d-flex justify-content-between align-items-end mb-2">
-                                        <label class="form-label fw-medium text-danger mb-0"><span id="unused-files-header-text">Unused Report Files</span> <span id="unused-files-count" class="badge bg-danger rounded-pill ms-1"></span></label>
-                                        <button type="button" id="btn-delete-all-unused" class="btn btn-danger btn-sm">
-                                            <i class="bi bi-trash-fill"></i> Delete All Unused
-                                        </button>
-                                    </div>
-                                    <ul id="unused-files-list" class="list-group mb-2" style="max-height: 200px; overflow-y: auto;">
-                                    </ul>
+                                    <details>
+                                        <summary class="fw-medium text-danger mb-2">
+                                            <span id="unused-files-header-text">Unused Report Files</span>
+                                            <span id="unused-files-count" class="badge bg-danger rounded-pill ms-1"></span>
+                                        </summary>
+                                        <div class="d-flex justify-content-end mb-2">
+                                            <button type="button" id="btn-delete-all-unused" class="btn btn-danger btn-sm">
+                                                <i class="bi bi-trash-fill"></i> Delete All Unused
+                                            </button>
+                                        </div>
+                                        <ul id="unused-files-list" class="list-group mb-2" style="max-height: 200px; overflow-y: auto;">
+                                        </ul>
+                                    </details>
                                 </div>
                             </div>
 
@@ -180,7 +184,21 @@
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <!-- Tiến độ / lỗi của lần import (đặt ở footer để luôn nhìn thấy) -->
+                    <div id="import-status" class="w-100 d-none">
+                        <div class="d-flex justify-content-between small mb-1 gap-2">
+                            <span id="import-status-file" class="text-truncate"></span>
+                            <span id="import-status-stats" class="text-nowrap text-secondary"></span>
+                        </div>
+                        <div class="progress" role="progressbar" aria-label="Import progress" aria-valuemin="0"
+                            aria-valuemax="100" aria-valuenow="0">
+                            <div id="import-status-bar" class="progress-bar progress-bar-striped progress-bar-animated"
+                                style="width: 0%">0%</div>
+                        </div>
+                    </div>
+                    <div id="import-status-error" class="w-100 alert alert-danger small py-2 mb-0 d-none" role="alert"></div>
+                    <button id="button-cancel-import" type="button" class="btn btn-outline-danger d-none">Cancel</button>
+                    <button id="button-close-import" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <!-- Submit -->
                     <button id="button-submit-import" type="submit" class="btn btn-primary">Submit</button>
                 </div>

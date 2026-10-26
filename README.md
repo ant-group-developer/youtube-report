@@ -13,16 +13,16 @@ A client-side web application for importing, aggregating, and analyzing YouTube 
 
 ## Features
 
-- **Import Data**: Select a folder containing YouTube reports and a month. The system automatically scans for `.csv` files and assigns them to the correct report type based on our parsing rules.
+- **Import Data**: Select a folder containing YouTube reports and a month. The system automatically scans for `.csv` files and assigns them to the correct report type based on our parsing rules. While importing, a progress bar shows the file being read, MB read and elapsed time, and the import can be cancelled; errors are shown in the dialog.
 - **In-Memory ZIP Extraction**: Automatically detects `.zip` and `.csv.zip` packages provided by YouTube. It efficiently evaluates their internal files, reads matching reports directly into memory, and instantly skips irrelevant large files—all without unzipping anything to your disk.
 - **Unused File Management**: Detects duplicate or junk `.csv` and `.zip` files sitting unused in your local folder, allowing you to individually or bulk delete them straight from the UI to free up space.
 - **Revenue Aggregation**: Aggregates Partner Revenue per channel from every revenue source YouTube reports: Ads, Ads Adjustments, Subscription (Red / Red Music) and its adjustments, Audio Tier, Shorts (Ads, Subscription, Music Dynamic Pool), Paid Features, Shopping Affiliate and PfEdu (from the affiliate payment summary), plus channel adjustments (monetization disabled / credit appeal), US-sourced revenue and tax withholdings.
   - Audio Tier reports have no Channel ID: revenue is matched to channels by Video ID using the Ads / Subscription reports; unmatched videos are grouped into one row.
   - The Shorts Music Dynamic Pool report only has totals per country, no channel breakdown: it is shown as its own row.
 - **Revenue by Source**: Shows the total of each revenue source and the file it came from, to reconcile with the Payment summary in YouTube Studio.
-- **Decimal Places**: Choose how many decimal places (0–12, default 2) amounts are rounded to in the table and the Excel export. Rounding is display-only: amounts keep full precision, so totals and Excel `SUM` match the source reports.
-- **Search and Pagination**: Quickly find specific channels using the search bar and navigate through large datasets with built-in pagination.
-- **Excel Export**: Export the aggregated report table seamlessly to an `.xlsx` file for offline use.
+- **Amounts**: Shown with 2 decimal places in the table; the Excel export keeps full-precision values (displayed as `#,##0.00`), so totals and Excel `SUM` match the source reports.
+- **Search and Pagination**: Quickly find specific channels using the search bar (filters after you stop typing) and navigate through large datasets with built-in pagination.
+- **Excel Export**: Export the aggregated report table (or the current search results) to an `.xlsx` file named after the report folder and month, with progress shown on the button.
 
 ## Configuration
 

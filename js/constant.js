@@ -218,14 +218,7 @@ const TABLE_COLUMNS = {
     NOTE: "Note",
 };
 
-// Số chữ số thập phân khi hiển thị số tiền trên bảng và trong file Excel (ô "Decimal places")
-const DECIMAL_PLACES = {
-    DEFAULT: 2,
-    MIN: 0,
-    MAX: 12, // report YouTube có tối đa 12 chữ số thập phân
-};
-
-// numFmt: "Amount" = số tiền, định dạng theo số chữ số thập phân đang chọn; "General" = giữ nguyên
+// numFmt: "Amount" = số tiền (hiển thị 2 chữ số thập phân, ô vẫn giữ giá trị gốc); "General" = giữ nguyên
 const EXCEL_COLUMNS = [
     {
         name: TABLE_COLUMNS.CHANNEL_ID,

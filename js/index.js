@@ -226,7 +226,7 @@ $("#month-select").on("change", function () {
 
         if (item.file) {
             processedList.append(
-                `<li class="list-group-item text-success"><i class="bi bi-check-circle-fill me-2"></i><strong>${item.label}:</strong> <span class="text-dark">${escapeHtml(item.file.name)}</span>${ruleHtml}</li>`,
+                `<li class="list-group-item text-success"><i class="bi bi-check-circle-fill me-2"></i><strong>${item.label}:</strong> <span class="text-dark text-break">${escapeHtml(item.file.name)}</span>${ruleHtml}</li>`,
             );
         } else {
             processedList.append(
@@ -430,10 +430,50 @@ const logRevenueSummary = (revenueSummary) => {
     console.log("=======================================");
 };
 
+// Đọc lần lượt các file của một lần import (getCsvData), báo tiến độ chung theo số byte đã đọc
+// trên tổng dung lượng các file. onProgress({ fileName, fileSize, fileNumber, fileCount, bytesDone,
+// bytesTotal }); signal: AbortSignal để huỷ. Lỗi đọc file được báo kèm tên file.
+const createImportReader = (values, { onProgress, signal } = {}) => {
+    const files = [...new Set(Object.values(values).filter(Boolean))];
+    const bytesTotal = files.reduce((sum, file) => sum + (file.size || 0), 0);
+    const startedFiles = new Set();
+    let bytesDone = 0;
+
+    return async (file, headerKey, headerDetector, options = {}) => {
+        if (!file) return [];
+        signal?.throwIfAborted();
+        startedFiles.add(file);
+        const report = () =>
+            onProgress?.({
+                fileName: file.name,
+                fileSize: file.size,
+                fileNumber: startedFiles.size,
+                fileCount: files.length,
+                // File affiliate được đọc nhiều lần nên số byte có thể vượt tổng một chút
+                bytesDone: Math.min(bytesDone, bytesTotal),
+                bytesTotal,
+            });
+        report();
+        try {
+            return await getCsvData(file, headerKey, headerDetector, {
+                ...options,
+                signal,
+                onProgress: (bytes) => {
+                    bytesDone += bytes;
+                    report();
+                },
+            });
+        } catch (error) {
+            if (error.name === "AbortError") throw error;
+            throw new Error(`${file.name}: ${error.message || error}`);
+        }
+    };
+};
+
 // Doanh thu của một nguồn chỉ có trong affiliate payment summary (Shopping Affiliate, PfEdu...)
-const getAffiliateOnlyRevenue = (file, source) => {
+const getAffiliateOnlyRevenue = (readCsv, file, source) => {
     const fileMonth = file ? extractMonthKey(file.name) : null;
-    return getCsvData(
+    return readCsv(
         file,
         {
             id: CSV_COLUMNS.CHANNEL_ID,
@@ -454,10 +494,12 @@ const getAffiliateOnlyRevenue = (file, source) => {
     );
 };
 
-const getAllCsvData = async (values) => {
+const getAllCsvData = async (values, { onProgress, signal } = {}) => {
+    const readCsv = createImportReader(values, { onProgress, signal });
+
     // Audio Tier không có Channel ID: đọc trước để lấy danh sách Video ID, kênh của từng video
     // được ghi lại khi đọc các report có cả Video ID và kênh bên dưới (Ads, Red...)
-    const audioTierByVideo = await getCsvData(
+    const audioTierByVideo = await readCsv(
         values.audioTierRevenueFile,
         {
             id: CSV_COLUMNS.VIDEO_ID,
@@ -473,7 +515,7 @@ const getAllCsvData = async (values) => {
     );
     const videoOptions = { videoChannels };
 
-    const dataAdsAdjustmentsRevenue = await getCsvData(
+    const dataAdsAdjustmentsRevenue = await readCsv(
         values.adsAdjustmentsRevenueFile,
         {
             id: CSV_COLUMNS.CHANNEL_ID,
@@ -483,7 +525,7 @@ const getAllCsvData = async (values) => {
         CSV_COLUMNS.CHANNEL_ID,
     );
 
-    const dataAdsRevenue = await getCsvData(
+    const dataAdsRevenue = await readCsv(
         values.adsRevenueFile,
         {
             id: CSV_COLUMNS.CHANNEL_ID,
@@ -494,7 +536,7 @@ const getAllCsvData = async (values) => {
         videoOptions,
     );
 
-    const dataPaidFeatures = await getCsvData(
+    const dataPaidFeatures = await readCsv(
         values.paidFeaturesFile,
         {
             id: CSV_COLUMNS.CHANNEL_ID,
@@ -504,7 +546,7 @@ const getAllCsvData = async (values) => {
         CSV_COLUMNS.CHANNEL_ID,
     );
 
-    const dataSubscriptionRevenueRed = await getCsvData(
+    const dataSubscriptionRevenueRed = await readCsv(
         values.subscriptionRevenueRedFile,
         {
             id: CSV_COLUMNS.CHANNEL_ID,
@@ -520,7 +562,7 @@ const getAllCsvData = async (values) => {
         CSV_COLUMNS.CHANNEL_ID,
         CSV_COLUMNS.VIDEO_CHANNEL_ID,
     ];
-    const dataSubscriptionRevenueRedMusic = await getCsvData(
+    const dataSubscriptionRevenueRedMusic = await readCsv(
         values.subscriptionRevenueRedMusicFile,
         {
             id: redMusicChannelIdColumns,
@@ -531,7 +573,7 @@ const getAllCsvData = async (values) => {
         videoOptions,
     );
 
-    const dataSubscriptionAdjustmentsRevenue = await getCsvData(
+    const dataSubscriptionAdjustmentsRevenue = await readCsv(
         values.subscriptionAdjustmentsRevenueFile,
         {
             id: redMusicChannelIdColumns,
@@ -542,7 +584,7 @@ const getAllCsvData = async (values) => {
         videoOptions,
     );
 
-    const dataYoutubeShortsAds = await getCsvData(
+    const dataYoutubeShortsAds = await readCsv(
         values.youtubeShortsAdsFile,
         {
             id: CSV_COLUMNS.CHANNEL_ID,
@@ -552,7 +594,7 @@ const getAllCsvData = async (values) => {
         CSV_COLUMNS.CHANNEL_ID,
     );
 
-    const dataYoutubeShortsSubscription = await getCsvData(
+    const dataYoutubeShortsSubscription = await readCsv(
         values.youtubeShortsSubscriptionFile,
         {
             id: CSV_COLUMNS.CHANNEL_ID,
@@ -562,7 +604,7 @@ const getAllCsvData = async (values) => {
         CSV_COLUMNS.CHANNEL_ID,
     );
 
-    const shortsPoolByCountry = await getCsvData(
+    const shortsPoolByCountry = await readCsv(
         values.shortsPoolRevenueFile,
         {
             id: CSV_COLUMNS.COUNTRY,
@@ -572,7 +614,7 @@ const getAllCsvData = async (values) => {
         { rawId: true },
     );
 
-    const dataCustomAdjustments = await getCsvData(
+    const dataCustomAdjustments = await readCsv(
         values.customAdjustmentsFile,
         {
             id: CSV_COLUMNS.CHANNEL_ID,
@@ -582,7 +624,7 @@ const getAllCsvData = async (values) => {
         CSV_COLUMNS.CHANNEL_ID,
     );
 
-    const dataAffiliatePaymentSummary = await getCsvData(
+    const dataAffiliatePaymentSummary = await readCsv(
         values.affiliatePaymentSummaryFile,
         {
             id: CSV_COLUMNS.CHANNEL_ID,
@@ -595,14 +637,17 @@ const getAllCsvData = async (values) => {
     );
 
     const dataShoppingAffiliateRevenue = await getAffiliateOnlyRevenue(
+        readCsv,
         values.affiliatePaymentSummaryFile,
         AFFILIATE_ONLY_SOURCES.SHOPPING_AFFILIATE,
     );
     const dataPfEduRevenue = await getAffiliateOnlyRevenue(
+        readCsv,
         values.affiliatePaymentSummaryFile,
         AFFILIATE_ONLY_SOURCES.PFEDU,
     );
     const dataOtherAffiliateRevenue = await getAffiliateOnlyRevenue(
+        readCsv,
         values.affiliatePaymentSummaryFile,
         AFFILIATE_ONLY_SOURCES.OTHER,
     );
@@ -947,37 +992,144 @@ const getImportFiles = () => {
     };
 };
 
+// AbortController của lần import đang chạy (null khi không import): dùng để huỷ và chặn đóng modal
+let importController = null;
+
+const formatMegabytes = (bytes) =>
+    `${(bytes / 1e6).toLocaleString("en-US", { maximumFractionDigits: 0 })} MB`;
+
+const formatDuration = (ms) => {
+    const seconds = Math.round(ms / 1000);
+    return seconds < 60
+        ? `${seconds} s`
+        : `${Math.floor(seconds / 60)} min ${seconds % 60} s`;
+};
+
+// Khoá form và nút Submit / Close trong lúc import, hiện nút Cancel và vùng tiến độ
+const setImportRunning = (running) => {
+    $("#csv-form fieldset").prop("disabled", running);
+    $(`#${BUTTON_SUBMIT_IMPORT_ID}`)
+        .prop("disabled", running)
+        .html(
+            running
+                ? `<span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                   <span role="status">Importing...</span>`
+                : "Submit",
+        );
+    $("#button-close-import").prop("disabled", running);
+    $(`#${MODAL_IMPORT_ID} .btn-close`).prop("disabled", running);
+    $("#button-cancel-import")
+        .toggleClass("d-none", !running)
+        .prop("disabled", false)
+        .text("Cancel");
+    $("#import-status").toggleClass("d-none", !running);
+};
+
+const renderImportProgress = (progress, startedAt) => {
+    const { fileName, fileSize, fileNumber, fileCount, bytesDone, bytesTotal } =
+        progress;
+    const percent = bytesTotal ? Math.floor((bytesDone / bytesTotal) * 100) : 0;
+    $("#import-status-file")
+        .text(
+            `Reading file ${fileNumber}/${fileCount}: ${fileName} (${formatMegabytes(fileSize)})`,
+        )
+        .attr("title", fileName);
+    $("#import-status-stats").text(
+        `${formatMegabytes(bytesDone)} / ${formatMegabytes(bytesTotal)} · ${formatDuration(Date.now() - startedAt)}`,
+    );
+    $("#import-status-bar").css("width", `${percent}%`).text(`${percent}%`);
+    $("#import-status .progress").attr("aria-valuenow", percent);
+};
+
+// Thông báo kết quả import trong footer của modal (lỗi: đỏ, đã huỷ: xám)
+const showImportMessage = (message, type) => {
+    $("#import-status-error")
+        .removeClass("d-none alert-danger alert-secondary")
+        .addClass(`alert-${type}`)
+        .text(message);
+};
+
 const onSubmitImport = async (e) => {
     e.preventDefault(); // Prevent the form from submitting
+    if (importController) return; // đang import
+
+    const values = getImportFiles();
+    console.log("Import Files:", values);
+    if (!values) return;
 
     $("#alert-container").empty(); // Clear old alerts
-    showLoading(BUTTON_SUBMIT_IMPORT_ID);
+    $("#import-status-error").addClass("d-none").text("");
+    importController = new AbortController();
+    const startedAt = Date.now();
+
+    // Tiến độ được báo sau mỗi đoạn dữ liệu: chỉ vẽ lại tối đa ~10 lần/giây (và khi sang file mới),
+    // thời gian chạy được cập nhật mỗi giây kể cả khi đang ở một bước dài
+    let lastProgress = null;
+    let lastRenderAt = 0;
+    const render = () => lastProgress && renderImportProgress(lastProgress, startedAt);
+    const timer = setInterval(render, 1000);
+
+    setImportRunning(true);
+    $("#import-status-file").text("Starting...");
+    $("#import-status-stats").text("");
+    $("#import-status-bar").css("width", "0%").text("0%");
 
     try {
-        const values = getImportFiles();
-        console.log("Import Files:", values);
-        if (!values) {
-            hideLoading(BUTTON_SUBMIT_IMPORT_ID);
-            return;
-        }
+        const allCsvData = await getAllCsvData(values, {
+            signal: importController.signal,
+            onProgress: (progress) => {
+                const fileChanged = progress.fileNumber !== lastProgress?.fileNumber;
+                lastProgress = progress;
+                const now = Date.now();
+                if (fileChanged || now - lastRenderAt >= 100) {
+                    lastRenderAt = now;
+                    render();
+                }
+            },
+        });
 
-        const allCsvData = await getAllCsvData(values);
+        // Đọc xong: gộp thành bảng là một bước chạy liền, cho giao diện vẽ trạng thái trước
+        $("#import-status-file").text("Building table...");
+        $("#import-status-bar").css("width", "100%").text("100%");
+        await nextPaint();
+
         const revenueSummary = getRevenueSummary(values, allCsvData);
         logRevenueSummary(revenueSummary);
 
         const tableData = convertTableData(allCsvData);
+        const monthKey = $("#month-select").val();
 
-        resetData(tableData);
-        renderRevenueSummary(revenueSummary, $("#month-select").val());
+        resetData(tableData, {
+            exportFileName: `${currentDirectoryHandle?.name ?? "youtube-report"}_${formatMonthKey(monthKey)}`,
+        });
+        renderRevenueSummary(revenueSummary, monthKey, Date.now() - startedAt);
 
         // Đóng modal sau khi xử lý thành công
+        importController = null;
         $(`#${MODAL_IMPORT_ID}`).modal("hide");
     } catch (error) {
-        console.log("error:", error);
+        if (error.name === "AbortError") {
+            showImportMessage("Import cancelled.", "secondary");
+        } else {
+            console.error("Import failed:", error);
+            showImportMessage(`Import failed: ${error.message || error}`, "danger");
+        }
+    } finally {
+        clearInterval(timer);
+        importController = null;
+        setImportRunning(false);
     }
-
-    hideLoading(BUTTON_SUBMIT_IMPORT_ID);
 };
+
+$("#button-cancel-import").on("click", function () {
+    importController?.abort();
+    $(this).prop("disabled", true).text("Cancelling...");
+});
+
+// Không cho đóng modal (nút X, Esc, bấm ra ngoài) khi đang import
+$(`#${MODAL_IMPORT_ID}`).on("hide.bs.modal", (e) => {
+    if (importController) e.preventDefault();
+});
 
 const submitImportBtn = getSubmitBtn(BUTTON_SUBMIT_IMPORT_ID);
 submitImportBtn.on("click", onSubmitImport);

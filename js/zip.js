@@ -11,25 +11,21 @@ const ZIP_SIGNATURE = {
 const ZIP_METHOD = { STORE: 0, DEFLATE: 8 };
 const ZIP_UINT32_MAX = 0xffffffff;
 
-const CRC32_TABLE = (() => {
-    const table = new Uint32Array(256);
-    for (let n = 0; n < 256; n++) {
-        let c = n;
-        for (let k = 0; k < 8; k++) {
-            c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-        }
-        table[n] = c >>> 0;
-    }
-    return table;
-})();
+// Header gzip (RFC 1952): 10 byte cố định + các trường tuỳ chọn theo cờ FLG
+const GZIP_FLAGS = { FHCRC: 2, FEXTRA: 4, FNAME: 8, FCOMMENT: 16 };
+const GZIP_TRAILER_LENGTH = 8; // CRC32 + kích thước gốc (little-endian)
 
-// crc là giá trị CRC đang tính dở (dùng để tính dần qua nhiều đoạn dữ liệu)
-const crc32 = (bytes, crc = 0) => {
-    let c = (crc ^ ZIP_UINT32_MAX) >>> 0;
-    for (let i = 0; i < bytes.length; i++) {
-        c = CRC32_TABLE[(c ^ bytes[i]) & 0xff] ^ (c >>> 8);
+const getGzipHeaderLength = (header) => {
+    if (header[0] !== 0x1f || header[1] !== 0x8b || header[2] !== 8) {
+        throw new Error("Unexpected gzip output from CompressionStream.");
     }
-    return (c ^ ZIP_UINT32_MAX) >>> 0;
+    const flags = header[3];
+    let length = 10;
+    if (flags & GZIP_FLAGS.FEXTRA) length += 2 + (header[length] | (header[length + 1] << 8));
+    if (flags & GZIP_FLAGS.FNAME) while (header[length++] !== 0);
+    if (flags & GZIP_FLAGS.FCOMMENT) while (header[length++] !== 0);
+    if (flags & GZIP_FLAGS.FHCRC) length += 2;
+    return length;
 };
 
 const readBlobView = async (blob, start, end) =>
@@ -170,14 +166,15 @@ const openZipEntry = async (zipFile, entry) => {
 
 // ---- Ghi ZIP ---------------------------------------------------------------
 
-// Nén một entry: chunks là danh sách / async iterable các chuỗi; chuỗi được mã hoá UTF-8,
-// tính CRC và nén dần nên chỉ phần dữ liệu đã nén được giữ trong RAM.
+// Nén một entry: chunks là danh sách / async iterable các chuỗi; chuỗi được mã hoá UTF-8 và nén dần
+// nên chỉ phần dữ liệu đã nén được giữ trong RAM.
+// Nén dạng gzip để trình duyệt tính luôn CRC32 (nằm ở cuối dữ liệu gzip) thay vì tính bằng JS;
+// phần nằm giữa header và trailer gzip chính là dữ liệu deflate cần ghi vào file zip.
 const deflateZipEntry = async (chunks) => {
     const encoder = new TextEncoder();
-    const compressor = new CompressionStream("deflate-raw");
+    const compressor = new CompressionStream("gzip");
     const writer = compressor.writable.getWriter();
     const compressedParts = [];
-    let compressedSize = 0;
 
     const reading = (async () => {
         const reader = compressor.readable.getReader();
@@ -185,22 +182,30 @@ const deflateZipEntry = async (chunks) => {
             const { done, value } = await reader.read();
             if (done) break;
             compressedParts.push(value);
-            compressedSize += value.length;
         }
     })();
 
-    let crc = 0;
     let size = 0;
     for await (const chunk of chunks) {
         const bytes = encoder.encode(chunk);
-        crc = crc32(bytes, crc);
         size += bytes.length;
         await writer.write(bytes);
     }
     await writer.close();
     await reading;
 
-    return { crc, size, compressedSize, data: new Blob(compressedParts) };
+    const gzip = new Blob(compressedParts);
+    const headerLength = getGzipHeaderLength(
+        new Uint8Array(await gzip.slice(0, 64 * 1024).arrayBuffer()),
+    );
+    const trailer = await readBlobView(
+        gzip,
+        gzip.size - GZIP_TRAILER_LENGTH,
+        gzip.size,
+    );
+    const data = gzip.slice(headerLength, gzip.size - GZIP_TRAILER_LENGTH);
+
+    return { crc: trailer.getUint32(0, true), size, compressedSize: data.size, data };
 };
 
 const getDosDateTime = (date) => ({

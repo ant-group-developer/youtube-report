@@ -22,13 +22,9 @@ const XLSX_ROW_VARIANTS = [
     { fontId: 3, fillId: 4 },
 ];
 const XLSX_ALIGNS = ["left", "right"];
-// General: numFmtId có sẵn của Excel; Amount: định dạng tự khai báo (id >= 164) theo số chữ số thập phân
-const XLSX_NUM_FMTS = { General: 0, Amount: 164 };
+// numFmtId có sẵn của Excel; Amount = "#,##0.00": hiển thị 2 chữ số, ô vẫn giữ giá trị gốc để SUM ra đúng tổng
+const XLSX_NUM_FMTS = { General: 0, Amount: 4 };
 const XLSX_HEADER_STYLE = 1;
-
-// Số tiền hiển thị theo số chữ số thập phân đang chọn; ô vẫn giữ giá trị đầy đủ để SUM ra đúng tổng
-const getXlsxAmountFormatCode = (decimalPlaces) =>
-    decimalPlaces > 0 ? `#,##0.${"0".repeat(decimalPlaces)}` : "#,##0";
 
 const getXlsxStyle = (variant, align, numFmtId) =>
     2 +
@@ -36,7 +32,7 @@ const getXlsxStyle = (variant, align, numFmtId) =>
     XLSX_ALIGNS.indexOf(align) * 2 +
     (numFmtId === XLSX_NUM_FMTS.Amount ? 1 : 0);
 
-const buildXlsxStyles = (decimalPlaces) => {
+const buildXlsxStyles = () => {
     const dataXfs = XLSX_ROW_VARIANTS.flatMap(({ fontId, fillId }) =>
         XLSX_ALIGNS.flatMap((align) =>
             [XLSX_NUM_FMTS.General, XLSX_NUM_FMTS.Amount].map(
@@ -51,7 +47,6 @@ const buildXlsxStyles = (decimalPlaces) => {
 
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-<numFmts count="1"><numFmt numFmtId="${XLSX_NUM_FMTS.Amount}" formatCode="${getXlsxAmountFormatCode(decimalPlaces)}"/></numFmts>
 <fonts count="4">
 <font><sz val="11"/><name val="Calibri"/><family val="2"/></font>
 <font><b/><sz val="12"/><color rgb="${XLSX_COLORS.HEADER_FONT}"/></font>
@@ -87,9 +82,15 @@ const getXlsxColumnName = (index) => {
     return name;
 };
 
-// Bỏ ký tự không hợp lệ trong XML (ký tự điều khiển, surrogate lẻ) để file không bị lỗi khi mở
-const escapeXml = (value) =>
-    String(value)
+// Ký tự cần xử lý khi ghi XML: &, <, > và ký tự điều khiển / surrogate (có thể không hợp lệ)
+const XML_SPECIAL_CHARS = /[&<>\u0000-\u001F\uD800-\uDFFF￾￿]/;
+
+// Bỏ ký tự không hợp lệ trong XML (ký tự điều khiển, surrogate lẻ) để file không bị lỗi khi mở.
+// Phần lớn chuỗi không có ký tự đặc biệt nên trả về luôn, không chạy các regex thay thế.
+const escapeXml = (value) => {
+    const text = String(value);
+    if (!XML_SPECIAL_CHARS.test(text)) return text;
+    return text
         .replace(
             /[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g,
             "",
@@ -97,6 +98,7 @@ const escapeXml = (value) =>
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;");
+};
 
 const getXlsxCell = (ref, style, value) => {
     if (value === null || value === undefined) {
@@ -115,15 +117,29 @@ const getXlsxCell = (ref, style, value) => {
     return `<c r="${ref}" s="${style}" t="inlineStr"><is><t xml:space="preserve">${escapeXml(value)}</t></is></c>`;
 };
 
+// Kiểu dòng theo giá trị có trong dòng: CREDIT - APPEAL (xanh) / MONETIZATION DISABLED (đỏ)
 const getXlsxRowVariant = (values) => {
     if (values.includes(ADJUSTMENT_TYPES.CREDIT_APPEAL.VALUE)) return 1;
     if (values.includes(ADJUSTMENT_TYPES.MONETIZATION_DISABLED.VALUE)) return 2;
     return 0;
 };
 
-async function* generateXlsxSheet(data, columns) {
+// onProgress(rowsDone, rowsTotal): gọi sau mỗi khối dòng đã tạo XML
+async function* generateXlsxSheet(data, columns, onProgress) {
     const columnNames = columns.map((_, index) => getXlsxColumnName(index));
     const lastColumn = columnNames[columnNames.length - 1];
+
+    // Tính sẵn style của từng cột theo kiểu dòng: [kiểu dòng][cột] => { text, number }
+    const styles = XLSX_ROW_VARIANTS.map((_, variant) =>
+        columns.map((col) => ({
+            text: getXlsxStyle(variant, col.align ?? "left", XLSX_NUM_FMTS.General),
+            number: getXlsxStyle(
+                variant,
+                col.align ?? "left",
+                XLSX_NUM_FMTS[col.numFmt] ?? XLSX_NUM_FMTS.General,
+            ),
+        })),
+    );
 
     yield `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -144,41 +160,61 @@ async function* generateXlsxSheet(data, columns) {
         .join("")}</row>
 `;
 
+    const values = new Array(columns.length);
     let xml = "";
+    let lastYieldAt = performance.now();
     for (let i = 0; i < data.length; i++) {
         const record = data[i];
         const rowNumber = i + 2;
-        const values = columns.map((col) => {
+        for (let c = 0; c < columns.length; c++) {
+            const col = columns[c];
             const rawValue = record[col.key];
             let value = col.format ? col.format(rawValue, record) : rawValue;
             // Cột số: ghi dạng number (kể cả giá trị là chuỗi số, vd. thuế suất từ CSV) để Excel tính toán được
-            if (col.numFmt && value !== "" && value !== null && !isNaN(Number(value))) {
+            if (
+                col.numFmt &&
+                typeof value !== "number" &&
+                value !== "" &&
+                value !== null &&
+                !isNaN(Number(value))
+            ) {
                 value = Number(value);
             }
-            return value;
-        });
-        const variant = getXlsxRowVariant(values);
+            values[c] = value;
+        }
+        const rowStyles = styles[getXlsxRowVariant(values)];
 
         xml += `<row r="${rowNumber}">`;
-        values.forEach((value, index) => {
-            const col = columns[index];
-            const numFmtId =
-                typeof value === "number" ? XLSX_NUM_FMTS[col.numFmt] ?? 0 : 0;
-            const style = getXlsxStyle(variant, col.align ?? "left", numFmtId);
-            xml += getXlsxCell(`${columnNames[index]}${rowNumber}`, style, value);
-        });
+        for (let c = 0; c < columns.length; c++) {
+            const value = values[c];
+            const style =
+                typeof value === "number" ? rowStyles[c].number : rowStyles[c].text;
+            xml += getXlsxCell(`${columnNames[c]}${rowNumber}`, style, value);
+        }
         xml += "</row>\n";
 
         if ((i + 1) % XLSX_ROWS_PER_CHUNK === 0) {
             yield xml;
             xml = "";
+            onProgress?.(i + 1, data.length);
+            // Ghi vào CompressionStream chỉ chờ microtask: nhường luồng chính định kỳ
+            // để trình duyệt vẽ lại tiến độ trên nút Export
+            if (performance.now() - lastYieldAt >= YIELD_INTERVAL_MS) {
+                await yieldToBrowser();
+                lastYieldAt = performance.now();
+            }
         }
     }
 
     yield `${xml}</sheetData>\n</worksheet>`;
+    onProgress?.(data.length, data.length);
 }
 
-const buildXlsxBlob = (data, decimalPlaces, columns = EXCEL_COLUMNS) => {
+// options.onProgress(rowsDone, rowsTotal): tiến độ tạo dữ liệu sheet
+const buildXlsxBlob = (
+    data,
+    { columns = EXCEL_COLUMNS, onProgress } = {},
+) => {
     if (data.length + 1 > XLSX_MAX_ROWS) {
         throw new Error(
             `Too many rows for one Excel sheet (${data.length}, max ${XLSX_MAX_ROWS - 1}).`,
@@ -216,7 +252,7 @@ const buildXlsxBlob = (data, decimalPlaces, columns = EXCEL_COLUMNS) => {
                     `${XML_HEAD}<Relationships xmlns="${NS_PKG_REL}"><Relationship Id="rId1" Type="${NS_REL}/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="${NS_REL}/styles" Target="styles.xml"/><Relationship Id="rId3" Type="${NS_REL}/sharedStrings" Target="sharedStrings.xml"/></Relationships>`,
                 ],
             },
-            { name: "xl/styles.xml", chunks: [buildXlsxStyles(decimalPlaces)] },
+            { name: "xl/styles.xml", chunks: [buildXlsxStyles()] },
             {
                 name: "xl/sharedStrings.xml",
                 chunks: [
@@ -225,19 +261,20 @@ const buildXlsxBlob = (data, decimalPlaces, columns = EXCEL_COLUMNS) => {
             },
             {
                 name: "xl/worksheets/sheet1.xml",
-                chunks: generateXlsxSheet(data, columns),
+                chunks: generateXlsxSheet(data, columns, onProgress),
             },
         ],
         XLSX_MIME,
     );
 };
 
-const exportExcel = async (data, decimalPlaces) => {
-    const blob = await buildXlsxBlob(data, decimalPlaces);
+// fileName: tên file không gồm đuôi .xlsx; ký tự không hợp lệ trong tên file được thay bằng "_"
+const exportExcel = async (data, fileName, onProgress) => {
+    const blob = await buildXlsxBlob(data, { onProgress });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = Date.now() + ".xlsx";
+    link.download = `${(fileName || String(Date.now())).replace(/[\\/:*?"<>|]/g, "_")}.xlsx`;
     link.click(); // Trình duyệt sẽ tự động tải xuống tệp
     setTimeout(() => URL.revokeObjectURL(url), 60000);
 };

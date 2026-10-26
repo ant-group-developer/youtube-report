@@ -4,8 +4,11 @@ let filteredData = dataTableGlobal; // Dữ liệu đã lọc (ban đầu bằng
 const pageSize = 30;
 let currentPage = 1;
 
-let decimalPlaces = DECIMAL_PLACES.DEFAULT; // số chữ số thập phân của số tiền (ô "Decimal places")
-let lastRevenueSummary = null; // { revenueSummary, monthKey } để vẽ lại khi đổi số chữ số thập phân
+let exportFileName = null; // tên file Excel theo thư mục và tháng của lần import gần nhất
+let searchIndex = null; // UC + tên (chữ thường) của từng dòng, tạo khi tìm kiếm lần đầu
+let searchTimer = null;
+// Footer chỉ tính lại khi dữ liệu đã lọc thay đổi, không phải mỗi lần đổi trang
+let footerData = null;
 
 // Lọc dữ liệu với phân trang
 const getDataPaginated = (data, page) => {
@@ -55,26 +58,18 @@ const renderTable = (data, searchTerm = "") => {
             searchTerm
         );
         const usRevenue = formatAmount(
-            item[TABLE_COLUMNS.US_REVENUE],
-            decimalPlaces
-        );
+            item[TABLE_COLUMNS.US_REVENUE]);
         const taxWithholdingRate = formatNumber(
             item[TABLE_COLUMNS.TAX_WITHHOLDING_RATE],
             searchTerm
         );
         const taxWithHeldAmount = formatAmount(
-            item[TABLE_COLUMNS.TAX_WITHHELD_AMOUNT],
-            decimalPlaces
-        );
-        const revenue = formatAmount(item[TABLE_COLUMNS.REVENUE], decimalPlaces);
+            item[TABLE_COLUMNS.TAX_WITHHELD_AMOUNT]);
+        const revenue = formatAmount(item[TABLE_COLUMNS.REVENUE]);
         const deductionAmount = formatAmount(
-            item[TABLE_COLUMNS.DEDUCTION_AMOUNT],
-            decimalPlaces
-        );
+            item[TABLE_COLUMNS.DEDUCTION_AMOUNT]);
         const totalRevenue = formatAmount(
-            item[TABLE_COLUMNS.TOTAL_REVENUE],
-            decimalPlaces
-        );
+            item[TABLE_COLUMNS.TOTAL_REVENUE]);
         const note = item[TABLE_COLUMNS.NOTE] || "";
 
         let className = "";
@@ -252,20 +247,20 @@ const renderFooter = (data) => {
     const footerContent = `
         <td class="bg-dark-subtle">Total: ${data.length} channel(s)</td>
         <td class="bg-dark-subtle"></td>
-        <td class="bg-dark-subtle">${formatAmount(totalUsRevenue, decimalPlaces)}</td>
+        <td class="bg-dark-subtle">${formatAmount(totalUsRevenue)}</td>
         <td class="bg-dark-subtle"></td>
-        <td class="bg-dark-subtle">${formatAmount(totalTaxWithheldAmount, decimalPlaces)}</td>
-        <td class="bg-dark-subtle">${formatAmount(totalRevenue, decimalPlaces)}</td>
-        <td class="bg-dark-subtle">${formatAmount(totalDeductionAmount, decimalPlaces)}</td>
-        <td class="bg-dark-subtle">${formatAmount(totalFinalRevenue, decimalPlaces)}</td>
+        <td class="bg-dark-subtle">${formatAmount(totalTaxWithheldAmount)}</td>
+        <td class="bg-dark-subtle">${formatAmount(totalRevenue)}</td>
+        <td class="bg-dark-subtle">${formatAmount(totalDeductionAmount)}</td>
+        <td class="bg-dark-subtle">${formatAmount(totalFinalRevenue)}</td>
         <td class="bg-dark-subtle"></td>
         `;
     footer.html(footerContent);
 };
 
 // Bảng tổng doanh thu theo nguồn (để đối chiếu với Payment summary của YouTube)
-const renderRevenueSummary = (revenueSummary, monthKey) => {
-    lastRevenueSummary = { revenueSummary, monthKey };
+// elapsedMs: thời gian xử lý lần import (hiển thị cạnh tiêu đề)
+const renderRevenueSummary = (revenueSummary, monthKey, elapsedMs) => {
     const container = $("#revenue-summary");
 
     const rows = revenueSummary.items
@@ -273,7 +268,7 @@ const renderRevenueSummary = (revenueSummary, monthKey) => {
             (item) => `<tr>
                 <td>${escapeHtml(item.label)}</td>
                 <td class="text-secondary text-break">${escapeHtml(item.file.name)}</td>
-                <td class="text-end text-nowrap">${formatAmount(item.amount, decimalPlaces)}</td>
+                <td class="text-end text-nowrap">${formatAmount(item.amount)}</td>
             </tr>`,
         )
         .join("");
@@ -282,7 +277,8 @@ const renderRevenueSummary = (revenueSummary, monthKey) => {
         <details class="border rounded-2 px-3 py-2" open>
             <summary class="fw-medium">
                 Revenue by source ${escapeHtml(formatMonthKey(monthKey) || "")}:
-                ${formatAmount(revenueSummary.total, decimalPlaces)} USD
+                ${formatAmount(revenueSummary.total)} USD
+                ${elapsedMs ? `<span class="fw-normal text-secondary small ms-2">imported in ${formatDuration(elapsedMs)}</span>` : ""}
             </summary>
             <table class="table table-sm mb-0 mt-2">
                 <thead>
@@ -297,7 +293,7 @@ const renderRevenueSummary = (revenueSummary, monthKey) => {
                     <tr>
                         <td>Total</td>
                         <td></td>
-                        <td class="text-end text-nowrap">${formatAmount(revenueSummary.total, decimalPlaces)}</td>
+                        <td class="text-end text-nowrap">${formatAmount(revenueSummary.total)}</td>
                     </tr>
                 </tfoot>
             </table>
@@ -310,7 +306,10 @@ const renderRevenueSummary = (revenueSummary, monthKey) => {
 const changePage = (page) => {
     const paginatedData = getDataPaginated(filteredData, page); // Use filtered data
     renderTable(paginatedData, $("#search").val()); // Use search term to highlight
-    renderFooter(filteredData); // Update footer with filtered data
+    if (footerData !== filteredData) {
+        renderFooter(filteredData); // Update footer with filtered data
+        footerData = filteredData;
+    }
     renderPagination(filteredData.length, page);
     currentPage = page;
 };
@@ -331,47 +330,41 @@ $("#pagination").on("click", "a", function (e) {
     }
 });
 
-// Search functionality
-$("#search").on("input", function () {
-    const searchTerm = $(this).val().toLowerCase();
-    filteredData = dataTableGlobal.filter((item) => {
-        const valUc = item[TABLE_COLUMNS.CHANNEL_ID];
-        const valName = item[TABLE_COLUMNS.CHANNEL_NAME];
-        return (
-            String(valUc).toLowerCase().includes(searchTerm) ||
-            String(valName).toLowerCase().includes(searchTerm)
+// Kênh không có doanh thu: Total Revenue = 0 (bỏ qua sai số khi cộng trừ)
+const hasRevenue = (item) => Math.abs(item[TABLE_COLUMNS.TOTAL_REVENUE]) >= 1e-9;
+
+// Search functionality + lọc kênh không có doanh thu (dữ liệu sau lọc dùng cho cả bảng và Excel)
+const applySearch = () => {
+    const searchTerm = $("#search").val().toLowerCase();
+    const hideZeroRevenue = $("#hide-zero-revenue").is(":checked");
+    if (!searchTerm && !hideZeroRevenue) {
+        filteredData = dataTableGlobal;
+    } else {
+        if (searchTerm) {
+            // "\n" ngăn cách UC và tên để từ khoá không khớp vắt qua hai cột
+            searchIndex ??= dataTableGlobal.map((item) =>
+                `${item[TABLE_COLUMNS.CHANNEL_ID]}\n${item[TABLE_COLUMNS.CHANNEL_NAME]}`.toLowerCase(),
+            );
+        }
+        filteredData = dataTableGlobal.filter(
+            (item, index) =>
+                (!hideZeroRevenue || hasRevenue(item)) &&
+                (!searchTerm || searchIndex[index].includes(searchTerm)),
         );
-    });
+    }
 
     // Reset to page 1 when search is done
     currentPage = 1;
     changePage(currentPage);
+};
+
+// Lọc sau khi ngừng gõ 250ms (lọc hàng trăm nghìn kênh sau mỗi phím gõ làm giật giao diện)
+$("#search").on("input", function () {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(applySearch, 250);
 });
 
-// Số chữ số thập phân: áp dụng ngay khi nhập số hợp lệ, vẽ lại bảng (giữ trang hiện tại)
-$("#decimal-places")
-    .on("input", function () {
-        const value = Number($(this).val());
-        if (
-            $(this).val() === "" ||
-            !Number.isInteger(value) ||
-            value < DECIMAL_PLACES.MIN ||
-            value > DECIMAL_PLACES.MAX
-        ) {
-            return; // đang nhập dở hoặc ngoài khoảng: giữ giá trị cũ
-        }
-        decimalPlaces = value;
-        changePage(currentPage);
-        if (lastRevenueSummary) {
-            renderRevenueSummary(
-                lastRevenueSummary.revenueSummary,
-                lastRevenueSummary.monthKey,
-            );
-        }
-    })
-    .on("change", function () {
-        $(this).val(decimalPlaces); // trả ô nhập về giá trị đang áp dụng nếu nhập sai
-    });
+$("#hide-zero-revenue").on("change", applySearch);
 
 // Initial render
 changePage(currentPage);
@@ -379,32 +372,46 @@ changePage(currentPage);
 // Export
 $("#export").on("click", async function () {
     const exportBtn = $(this);
-    exportBtn.prop("disabled", true); // Tránh bấm nhiều lần khi đang xuất file lớn
+    const label = exportBtn.html();
+    // Tránh bấm nhiều lần khi đang xuất file lớn; hiện % tiến độ ngay trên nút
+    exportBtn.prop("disabled", true).html(
+        `<span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+         <span role="status">Exporting 0%</span>`,
+    );
+    const fileName =
+        exportFileName && $("#search").val()
+            ? `${exportFileName}_filtered`
+            : exportFileName;
     try {
-        await exportExcel(filteredData, decimalPlaces);
+        await exportExcel(filteredData, fileName, (done, total) => {
+            // Tạo xong dữ liệu sheet: còn chờ nén nốt phần cuối
+            const text =
+                done >= total
+                    ? "Finishing..."
+                    : `Exporting ${Math.floor((done / total) * 100)}%`;
+            exportBtn.find("[role=status]").text(text);
+        });
     } catch (error) {
         console.error("Export failed:", error);
         alert(`Export failed: ${error.message}`);
     }
-    exportBtn.prop("disabled", false);
+    exportBtn.prop("disabled", false).html(label);
 });
 
 // Hàm đặt lại dữ liệu, tìm kiếm và phân trang
-const resetData = (initialData) => {
+// options.exportFileName: tên file Excel (không gồm đuôi) cho dữ liệu này
+const resetData = (initialData, { exportFileName: fileName = null } = {}) => {
     // Đặt lại dataTableGlobal về dữ liệu ban đầu
     dataTableGlobal = initialData;
+    exportFileName = fileName;
+    searchIndex = null;
 
     // Đặt lại từ khóa tìm kiếm (clear input)
+    clearTimeout(searchTimer);
     $("#search").val("");
 
-    // Đặt lại filteredData bằng dữ liệu ban đầu
-    filteredData = dataTableGlobal;
-
-    // Đặt lại trang hiện tại về 1
-    currentPage = 1;
-
-    // Hiển thị lại dữ liệu và phân trang
-    changePage(currentPage);
+    // Lọc lại theo checkbox "Hide channels without revenue", về trang 1 và hiển thị lại
+    applySearch();
 
     // // Scroll đến phần tử có id "table-wrapper"
     // $("html, body").animate(
