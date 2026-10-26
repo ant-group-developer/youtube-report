@@ -13,11 +13,13 @@ A client-side web application for importing, aggregating, and analyzing YouTube 
 
 ## Features
 
-- **Auto Import Data**: Select a folder containing YouTube reports. The system automatically scans for `.csv` files and assigns them to the correct report type based on our parsing rules.
+- **Import Data**: Select a folder containing YouTube reports and a month. The system automatically scans for `.csv` files and assigns them to the correct report type based on our parsing rules.
 - **In-Memory ZIP Extraction**: Automatically detects `.zip` and `.csv.zip` packages provided by YouTube. It efficiently evaluates their internal files, reads matching reports directly into memory, and instantly skips irrelevant large files—all without unzipping anything to your disk.
 - **Unused File Management**: Detects duplicate or junk `.csv` and `.zip` files sitting unused in your local folder, allowing you to individually or bulk delete them straight from the UI to free up space.
-- **Manual Import Data**: Manually classify and upload specific CSVs (Ads Revenue, Paid Features, Subscription Red, YouTube Shorts, etc.).
-- **Revenue Aggregation**: Automatically aggregates channel earnings, US-sourced revenue, tax withholdings, adjustments, and deductions.
+- **Revenue Aggregation**: Aggregates Partner Revenue per channel from every revenue source YouTube reports: Ads, Ads Adjustments, Subscription (Red / Red Music) and its adjustments, Audio Tier, Shorts (Ads, Subscription, country pool), Paid Features, Shopping Affiliate and PfEdu (from the affiliate payment summary), plus channel adjustments (monetization disabled / credit appeal), US-sourced revenue and tax withholdings.
+  - Audio Tier reports have no Channel ID: revenue is matched to channels by Video ID using the Ads / Subscription reports; unmatched videos are grouped into one row.
+  - The Shorts country pool report has no channel breakdown: it is shown as its own row.
+- **Revenue by Source**: Shows the total of each revenue source and the file it came from, to reconcile with the Payment summary in YouTube Studio.
 - **Search and Pagination**: Quickly find specific channels using the search bar and navigate through large datasets with built-in pagination.
 - **Excel Export**: Export the aggregated report table seamlessly to an `.xlsx` file for offline use.
 
@@ -29,8 +31,9 @@ Since this is a vanilla JS application running locally, there are no environment
 |----------|-------------|
 | `css/style.css` | Custom layout and UI styling |
 | `js/constant.js` | CSV column mappings and file matching rules |
-| `js/data.js` | Data processing and CSV parsing logic |
-| `js/index.js` | Modal handling and main functional flows |
+| `js/utils.js` | Streaming CSV parsing and file matching helpers |
+| `js/index.js` | Folder scanning, import flow and revenue aggregation |
+| `js/table.js` | Table, revenue by source, search, pagination and export |
 
 ## Documentation
 

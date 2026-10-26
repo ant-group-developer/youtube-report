@@ -1,26 +1,4 @@
-// Store current files to prevent clearing on cancel
-const currentFiles = {};
-$(document).on("click", 'input[type="file"]', function () {
-    currentFiles[this.id] = this.files;
-});
-
-// Trigger validation on file change and form submit
-$("#csv-form").on("change", 'input[type="file"]', function () {
-    if (
-        this.files.length === 0 &&
-        currentFiles[this.id] &&
-        currentFiles[this.id].length > 0
-    ) {
-        this.files = currentFiles[this.id];
-    }
-
-    const inputId = $(this).attr("id");
-    const errorId = inputId + "-error"; // Error element id is based on input id
-    validateCsvFile(inputId, errorId);
-    // validateFileInput(inputId, errorId);
-});
-
-// Scan files when selected for Auto Import
+// Scan files when a report folder is selected
 let currentDirectoryHandle = null;
 let allDiskFiles = [];
 let folderFiles = [];
@@ -110,7 +88,7 @@ $("#btn-select-folder").on("click", async function () {
 
 function processFolderFiles(files) {
     if (files.length === 0) {
-        $("#auto-file-details").addClass("d-none");
+        $("#import-file-details").addClass("d-none");
         return;
     }
 
@@ -139,10 +117,10 @@ function processFolderFiles(files) {
     });
 
     if (sortedMonths.length > 0) {
-        $("#auto-file-details").removeClass("d-none");
+        $("#import-file-details").removeClass("d-none");
         monthSelect.trigger("change"); // Populates file list preview
     } else {
-        $("#auto-file-details").addClass("d-none");
+        $("#import-file-details").addClass("d-none");
     }
 }
 
@@ -151,7 +129,7 @@ $("#month-select").on("change", function () {
     const selectedMonth = $(this).val();
     if (!selectedMonth) return;
 
-    const filesObj = getFormAutoFiles();
+    const filesObj = getImportFiles();
 
     const processedList = $("#processed-files-list");
     processedList.empty();
@@ -170,6 +148,11 @@ $("#month-select").on("change", function () {
             rule: RULES.YOUTUBE_SHORTS_ADS,
         },
         {
+            label: "Shorts (Country Pool)",
+            file: filesObj.shortsPoolRevenueFile,
+            rule: RULES.SHORTS_POOL_REVENUE,
+        },
+        {
             label: "Subscription Red Music",
             file: filesObj.subscriptionRevenueRedMusicFile,
             rule: RULES.SUBSCRIPTION_REVENUE_RED_MUSIC,
@@ -178,6 +161,16 @@ $("#month-select").on("change", function () {
             label: "Subscription Red",
             file: filesObj.subscriptionRevenueRedFile,
             rule: RULES.SUBSCRIPTION_REVENUE_RED,
+        },
+        {
+            label: "Subscription Adjustments",
+            file: filesObj.subscriptionAdjustmentsRevenueFile,
+            rule: RULES.SUBSCRIPTION_ADJUSTMENTS_REVENUE,
+        },
+        {
+            label: "Audio Tier",
+            file: filesObj.audioTierRevenueFile,
+            rule: RULES.AUDIO_TIER_REVENUE,
         },
         {
             label: "Paid Features",
@@ -200,7 +193,7 @@ $("#month-select").on("change", function () {
             rule: RULES.CUSTOM_ADJUSMENTS,
         },
         {
-            label: "Affiliate Summary",
+            label: "Affiliate Summary (Tax, Shopping, PfEdu)",
             file: filesObj.affiliatePaymentSummaryFile,
             rule: RULES.AFFILIATE_PAYMENT_SUMMARY,
         },
@@ -327,159 +320,159 @@ $("#month-select").on("change", function () {
     }
 });
 
-const getFormManualFiles = () => {
-    // Reset lỗi trước khi kiểm tra
-    $(".error-message").text("");
-    $("input[type='file']").removeClass("is-invalid is-valid");
+// Tổng doanh thu theo từng nguồn, để đối chiếu với Payment summary của YouTube.
+// Chỉ liệt kê nguồn có file; nguồn lấy từ affiliate summary chỉ liệt kê khi có doanh thu.
+const getRevenueSummary = (values, allCsvData) => {
+    const sumRevenue = (data) =>
+        data.reduce((sum, row) => sum + (row.channelRev || 0), 0);
 
-    let validateSuccess = true;
+    const sumCustomAdjustments = (data) =>
+        data.reduce((sum, row) => {
+            const amount = row.channelDeductionAmount || 0;
+            return row.channelAdjustmentType ===
+                ADJUSTMENT_TYPES.MONETIZATION_DISABLED.VALUE
+                ? sum - amount
+                : sum + amount;
+        }, 0);
 
-    const validateFile = (fileInputId, errorMessageId) => {
-        const file = $("#" + fileInputId)[0].files[0];
-        const errorMessage = $("#" + errorMessageId);
-        const fileInput = $("#" + fileInputId);
-
-        if (file && !file.name.endsWith(".csv")) {
-            errorMessage.text("Please select a valid csv file.");
-            fileInput.addClass("is-invalid");
-            validateSuccess = false;
-        }
-
-        // if (!file) {
-        //     errorMessage.text("Please select a csv file.");
-        //     fileInput.addClass("is-invalid");
-        //     validateSuccess = false;
-        // } else if (!file.name.endsWith(".csv")) {
-        //     errorMessage.text("Please select a valid csv file.");
-        //     fileInput.addClass("is-invalid");
-        //     validateSuccess = false;
-        // } else {
-        //     errorMessage.text("");
-        //     fileInput.removeClass("is-invalid").addClass("is-valid");
-        // }
-
-        return file;
-    };
-
-    const adsAdjustmentsRevenueFile = validateFile(
-        "ads-adjustments-revenue",
-        "ads-adjustments-revenue-error",
-    );
-    const adsRevenueFile = validateFile("ads-revenue", "ads-revenue-error");
-    const paidFeaturesFile = validateFile(
-        "paid-features",
-        "paid-features-error",
-    );
-    const subscriptionRevenueRedFile = validateFile(
-        "subscription-revenue-red",
-        "subscription-revenue-red-error",
-    );
-    const subscriptionRevenueRedMusicFile = validateFile(
-        "subscription-revenue-red-music",
-        "subscription-revenue-red-music-error",
-    );
-    const youtubeShortsAdsFile = validateFile(
-        "youtube-shorts-ads",
-        "youtube-shorts-ads-error",
-    );
-    const youtubeShortsSubscriptionFile = validateFile(
-        "youtube-shorts-subscription",
-        "youtube-shorts-subscription-error",
-    );
-    const customAdjustmentsFile = validateFile(
-        "custom-adjustments",
-        "custom-adjustments-error",
-    );
-    const affiliatePaymentSummaryFile = validateFile(
-        "affiliate-payment-summary",
-        "affiliate-payment-summary-error",
-    );
-
-    if (!validateSuccess) {
-        return;
-    }
+    const items = [
+        {
+            label: "Ads Revenue",
+            file: values.adsRevenueFile,
+            amount: sumRevenue(allCsvData.dataAdsRevenue),
+        },
+        {
+            label: "Ads Adjustments",
+            file: values.adsAdjustmentsRevenueFile,
+            amount: sumRevenue(allCsvData.dataAdsAdjustmentsRevenue),
+        },
+        {
+            label: "Subscription Red Music",
+            file: values.subscriptionRevenueRedMusicFile,
+            amount: sumRevenue(allCsvData.dataSubscriptionRevenueRedMusic),
+        },
+        {
+            label: "Subscription Red",
+            file: values.subscriptionRevenueRedFile,
+            amount: sumRevenue(allCsvData.dataSubscriptionRevenueRed),
+        },
+        {
+            label: "Subscription Adjustments",
+            file: values.subscriptionAdjustmentsRevenueFile,
+            amount: sumRevenue(allCsvData.dataSubscriptionAdjustmentsRevenue),
+        },
+        {
+            label: "Audio Tier",
+            file: values.audioTierRevenueFile,
+            amount: sumRevenue(allCsvData.dataAudioTierRevenue),
+        },
+        {
+            label: "Shorts Ads",
+            file: values.youtubeShortsAdsFile,
+            amount: sumRevenue(allCsvData.dataYoutubeShortsAds),
+        },
+        {
+            label: "Shorts Subscription",
+            file: values.youtubeShortsSubscriptionFile,
+            amount: sumRevenue(allCsvData.dataYoutubeShortsSubscription),
+        },
+        {
+            label: "Shorts (Country Pool)",
+            file: values.shortsPoolRevenueFile,
+            amount: sumRevenue(allCsvData.dataShortsPoolRevenue),
+        },
+        {
+            label: "Paid Features",
+            file: values.paidFeaturesFile,
+            amount: sumRevenue(allCsvData.dataPaidFeatures),
+        },
+        {
+            label: AFFILIATE_ONLY_SOURCES.SHOPPING_AFFILIATE.LABEL,
+            file: values.affiliatePaymentSummaryFile,
+            amount: sumRevenue(allCsvData.dataShoppingAffiliateRevenue),
+            optional: true,
+        },
+        {
+            label: AFFILIATE_ONLY_SOURCES.PFEDU.LABEL,
+            file: values.affiliatePaymentSummaryFile,
+            amount: sumRevenue(allCsvData.dataPfEduRevenue),
+            optional: true,
+        },
+        {
+            label: AFFILIATE_ONLY_SOURCES.OTHER.LABEL,
+            file: values.affiliatePaymentSummaryFile,
+            amount: sumRevenue(allCsvData.dataOtherAffiliateRevenue),
+            optional: true,
+        },
+        {
+            label: "Channel Adjustments",
+            file: values.customAdjustmentsFile,
+            amount: sumCustomAdjustments(allCsvData.dataCustomAdjustments),
+        },
+    ].filter((item) => item.file && !(item.optional && item.amount === 0));
 
     return {
-        adsAdjustmentsRevenueFile,
-        adsRevenueFile,
-        paidFeaturesFile,
-        subscriptionRevenueRedFile,
-        subscriptionRevenueRedMusicFile,
-        youtubeShortsAdsFile,
-        youtubeShortsSubscriptionFile,
-        customAdjustmentsFile,
-        affiliatePaymentSummaryFile,
+        items,
+        total: items.reduce((sum, item) => sum + item.amount, 0),
     };
 };
 
-const logRevenueSummary = (prefix, allCsvData) => {
-    const sumRaw = (arr, key) => {
-        if (!arr) return 0;
-        return arr.reduce((sum, row) => sum + (row[key] || 0), 0);
-    };
-
-    const sumCustomAdj = (arr) => {
-        if (!arr) return 0;
-        return arr.reduce((sum, row) => {
-            let amount = row.channelDeductionAmount || 0;
-            if (
-                row.channelAdjustmentType ===
-                ADJUSTMENT_TYPES.MONETIZATION_DISABLED.VALUE
-            ) {
-                amount *= -1;
-            }
-            return sum + amount;
-        }, 0);
-    };
-
+const logRevenueSummary = (revenueSummary) => {
     const format = (val) =>
         val.toLocaleString("en-US", { style: "currency", currency: "USD" });
 
-    const adsAdj = sumRaw(allCsvData.dataAdsAdjustmentsRevenue, "channelRev");
-    const adsRev = sumRaw(allCsvData.dataAdsRevenue, "channelRev");
-    const paidFeat = sumRaw(allCsvData.dataPaidFeatures, "channelRev");
-    const subRed = sumRaw(allCsvData.dataSubscriptionRevenueRed, "channelRev");
-    const subRedMusic = sumRaw(
-        allCsvData.dataSubscriptionRevenueRedMusic,
-        "channelRev",
+    console.log("=== Import Revenue Summary ===");
+    revenueSummary.items.forEach((item) =>
+        console.log(`${item.label}:`, format(item.amount), `(${item.file.name})`),
     );
-    const shortsAds = sumRaw(allCsvData.dataYoutubeShortsAds, "channelRev");
-    const shortsSub = sumRaw(
-        allCsvData.dataYoutubeShortsSubscription,
-        "channelRev",
-    );
-    const customAdj = sumCustomAdj(allCsvData.dataCustomAdjustments);
-    const taxWithheld = sumRaw(
-        allCsvData.dataAffiliatePaymentSummary,
-        "channelTaxWithheldAmount",
-    );
-
-    const totalRevenue =
-        adsAdj +
-        adsRev +
-        paidFeat +
-        subRed +
-        subRedMusic +
-        shortsAds +
-        shortsSub +
-        customAdj;
-
-    console.log(`=== ${prefix} Import Revenue Summary ===`);
-    console.log(`Ads Adjustments Revenue:`, format(adsAdj));
-    console.log(`Ads Revenue:`, format(adsRev));
-    console.log(`Paid Features:`, format(paidFeat));
-    console.log(`Subscription Red:`, format(subRed));
-    console.log(`Subscription Red Music:`, format(subRedMusic));
-    console.log(`Shorts Ads:`, format(shortsAds));
-    console.log(`Shorts Subscription:`, format(shortsSub));
-    console.log(`Custom Adjustments (Deductions):`, format(customAdj));
-    console.log(`Affiliate Payment (Tax Withheld):`, format(taxWithheld));
-    console.log(`---------------------------------------`);
-    console.log(`TOTAL REVENUE:`, format(totalRevenue));
+    console.log("---------------------------------------");
+    console.log("TOTAL REVENUE:", format(revenueSummary.total));
     console.log("=======================================");
 };
 
+// Doanh thu của một nguồn chỉ có trong affiliate payment summary (Shopping Affiliate, PfEdu...)
+const getAffiliateOnlyRevenue = (file, source) => {
+    const fileMonth = file ? extractMonthKey(file.name) : null;
+    return getCsvData(
+        file,
+        {
+            id: CSV_COLUMNS.CHANNEL_ID,
+            revenue: CSV_COLUMNS.TOTAL_REVENUE_BY_SOURCE,
+        },
+        CSV_COLUMNS.CHANNEL_ID,
+        {
+            filters: [
+                { column: CSV_COLUMNS.REVENUE_SOURCE, test: source.test },
+                // Chỉ lấy doanh thu của chính tháng báo cáo:
+                // khoản của tháng trước được trả bù đã nằm trong CREDIT - APPEAL (Custom Adjustments)
+                {
+                    column: CSV_COLUMNS.ADSENSE_EARNINGS_MONTH,
+                    test: (month) => month === fileMonth,
+                },
+            ],
+        },
+    );
+};
+
 const getAllCsvData = async (values) => {
+    // Audio Tier không có Channel ID: đọc trước để lấy danh sách Video ID, kênh của từng video
+    // được ghi lại khi đọc các report có cả Video ID và kênh bên dưới (Ads, Red...)
+    const audioTierByVideo = await getCsvData(
+        values.audioTierRevenueFile,
+        {
+            id: CSV_COLUMNS.VIDEO_ID,
+            revenue: CSV_COLUMNS.PARTNER_REVENUE,
+        },
+        CSV_COLUMNS.VIDEO_ID,
+        { rawId: true },
+    );
+    const videoChannels = new Map(
+        audioTierByVideo
+            .filter((item) => item.channelId)
+            .map((item) => [item.channelId, null]),
+    );
+    const videoOptions = { videoChannels };
+
     const dataAdsAdjustmentsRevenue = await getCsvData(
         values.adsAdjustmentsRevenueFile,
         {
@@ -498,6 +491,7 @@ const getAllCsvData = async (values) => {
             revenue: CSV_COLUMNS.PARTNER_REVENUE,
         },
         CSV_COLUMNS.CHANNEL_ID,
+        videoOptions,
     );
 
     const dataPaidFeatures = await getCsvData(
@@ -518,8 +512,10 @@ const getAllCsvData = async (values) => {
             revenue: CSV_COLUMNS.PARTNER_REVENUE,
         },
         CSV_COLUMNS.CHANNEL_ID,
+        videoOptions,
     );
 
+    // File Red Music / điều chỉnh Red Music dạng "*_subscription_video_v1_1_*" không có "Channel ID"
     const redMusicChannelIdColumns = [
         CSV_COLUMNS.CHANNEL_ID,
         CSV_COLUMNS.VIDEO_CHANNEL_ID,
@@ -532,6 +528,18 @@ const getAllCsvData = async (values) => {
             revenue: CSV_COLUMNS.PARTNER_REVENUE,
         },
         redMusicChannelIdColumns,
+        videoOptions,
+    );
+
+    const dataSubscriptionAdjustmentsRevenue = await getCsvData(
+        values.subscriptionAdjustmentsRevenueFile,
+        {
+            id: redMusicChannelIdColumns,
+            name: CSV_COLUMNS.CHANNEL_DISPLAY_NAME,
+            revenue: CSV_COLUMNS.PARTNER_REVENUE,
+        },
+        redMusicChannelIdColumns,
+        videoOptions,
     );
 
     const dataYoutubeShortsAds = await getCsvData(
@@ -552,6 +560,16 @@ const getAllCsvData = async (values) => {
             revenue: CSV_COLUMNS.PARTNER_REVENUE,
         },
         CSV_COLUMNS.CHANNEL_ID,
+    );
+
+    const shortsPoolByCountry = await getCsvData(
+        values.shortsPoolRevenueFile,
+        {
+            id: CSV_COLUMNS.COUNTRY,
+            revenue: CSV_COLUMNS.SHORTS_PARTNER_REVENUE,
+        },
+        CSV_COLUMNS.SHORTS_PARTNER_REVENUE,
+        { rawId: true },
     );
 
     const dataCustomAdjustments = await getCsvData(
@@ -576,16 +594,54 @@ const getAllCsvData = async (values) => {
         CSV_COLUMNS.CHANNEL_ID,
     );
 
+    const dataShoppingAffiliateRevenue = await getAffiliateOnlyRevenue(
+        values.affiliatePaymentSummaryFile,
+        AFFILIATE_ONLY_SOURCES.SHOPPING_AFFILIATE,
+    );
+    const dataPfEduRevenue = await getAffiliateOnlyRevenue(
+        values.affiliatePaymentSummaryFile,
+        AFFILIATE_ONLY_SOURCES.PFEDU,
+    );
+    const dataOtherAffiliateRevenue = await getAffiliateOnlyRevenue(
+        values.affiliatePaymentSummaryFile,
+        AFFILIATE_ONLY_SOURCES.OTHER,
+    );
+
+    // Gắn doanh thu Audio Tier vào kênh của video; video không tìm thấy kênh gom vào một dòng riêng
+    const dataAudioTierRevenue = audioTierByVideo.map((item) => {
+        const channelId = videoChannels.get(item.channelId);
+        return channelId
+            ? { ...item, channelId, channelName: channelId }
+            : {
+                  ...item,
+                  channelId: NO_CHANNEL_ROWS.AUDIO_TIER.KEY,
+                  channelName: NO_CHANNEL_ROWS.AUDIO_TIER.NAME,
+              };
+    });
+
+    // Shorts theo quốc gia không chia được theo kênh: gom thành một dòng riêng
+    const dataShortsPoolRevenue = shortsPoolByCountry.map((item) => ({
+        ...item,
+        channelId: NO_CHANNEL_ROWS.SHORTS_POOL.KEY,
+        channelName: NO_CHANNEL_ROWS.SHORTS_POOL.NAME,
+    }));
+
     return {
         dataAdsAdjustmentsRevenue,
         dataAdsRevenue,
         dataPaidFeatures,
         dataSubscriptionRevenueRed,
         dataSubscriptionRevenueRedMusic,
+        dataSubscriptionAdjustmentsRevenue,
+        dataAudioTierRevenue,
         dataYoutubeShortsAds,
         dataYoutubeShortsSubscription,
+        dataShortsPoolRevenue,
         dataCustomAdjustments,
         dataAffiliatePaymentSummary,
+        dataShoppingAffiliateRevenue,
+        dataPfEduRevenue,
+        dataOtherAffiliateRevenue,
     };
 };
 
@@ -679,10 +735,16 @@ const convertTableData = (allCsvData) => {
         dataPaidFeatures,
         dataSubscriptionRevenueRed,
         dataSubscriptionRevenueRedMusic,
+        dataSubscriptionAdjustmentsRevenue,
+        dataAudioTierRevenue,
         dataYoutubeShortsAds,
         dataYoutubeShortsSubscription,
+        dataShortsPoolRevenue,
         dataCustomAdjustments,
         dataAffiliatePaymentSummary,
+        dataShoppingAffiliateRevenue,
+        dataPfEduRevenue,
+        dataOtherAffiliateRevenue,
     } = allCsvData;
 
     // Check for Local Currency mismatches across all files
@@ -746,6 +808,16 @@ const convertTableData = (allCsvData) => {
         tableData,
     );
 
+    // Subscription Adjustments (điều chỉnh Red Music)
+    processRevenueData(
+        dataSubscriptionAdjustmentsRevenue,
+        TABLE_COLUMNS.REVENUE,
+        tableData,
+    );
+
+    // Audio Tier (đã gắn kênh theo Video ID)
+    processRevenueData(dataAudioTierRevenue, TABLE_COLUMNS.REVENUE, tableData);
+
     // YouTube Shorts Ads
     processRevenueData(dataYoutubeShortsAds, TABLE_COLUMNS.REVENUE, tableData);
 
@@ -756,28 +828,46 @@ const convertTableData = (allCsvData) => {
         tableData,
     );
 
+    // YouTube Shorts theo quốc gia (dòng riêng, không có kênh)
+    processRevenueData(dataShortsPoolRevenue, TABLE_COLUMNS.REVENUE, tableData);
+
+    // Shopping Affiliate, PfEdu và khoản thưởng (affiliate payment summary)
+    processRevenueData(
+        dataShoppingAffiliateRevenue,
+        TABLE_COLUMNS.REVENUE,
+        tableData,
+    );
+    processRevenueData(dataPfEduRevenue, TABLE_COLUMNS.REVENUE, tableData);
+    processRevenueData(
+        dataOtherAffiliateRevenue,
+        TABLE_COLUMNS.REVENUE,
+        tableData,
+    );
+
     // Custom Adjustments - Deduction Amount
     processDeductionData(dataCustomAdjustments, tableData);
 
     // Affiliate Payment Summary
     processAffiliatePaymentData(dataAffiliatePaymentSummary, tableData);
 
+    const noChannelKeys = Object.values(NO_CHANNEL_ROWS).map((row) => row.KEY);
+
+    // Giữ nguyên số tiền (không làm tròn từng kênh): làm tròn 2 chữ số cho hàng trăm nghìn kênh
+    // có doanh thu rất nhỏ sẽ làm tổng lệch hàng chục USD. Chỉ làm tròn khi hiển thị (formatAmount).
     const result = Array.from(tableData, ([_, value]) => {
-        value[TABLE_COLUMNS.US_REVENUE] =
-            value[TABLE_COLUMNS.US_REVENUE].toFixed(2);
-        value[TABLE_COLUMNS.TAX_WITHHELD_AMOUNT] =
-            value[TABLE_COLUMNS.TAX_WITHHELD_AMOUNT].toFixed(2);
-        value[TABLE_COLUMNS.REVENUE] = value[TABLE_COLUMNS.REVENUE].toFixed(2);
-        value[TABLE_COLUMNS.DEDUCTION_AMOUNT] =
-            value[TABLE_COLUMNS.DEDUCTION_AMOUNT].toFixed(2);
-        value[TABLE_COLUMNS.TOTAL_REVENUE] =
-            value[TABLE_COLUMNS.TOTAL_REVENUE].toFixed(2);
+        // Dòng doanh thu không có kênh: không có Channel ID / link
+        const hasChannel = !noChannelKeys.includes(
+            value[TABLE_COLUMNS.CHANNEL_ID],
+        );
 
         return {
             ...value,
-            [TABLE_COLUMNS.CHANNEL_LINK]: getYouTubeChannelLink(
-                value[TABLE_COLUMNS.CHANNEL_ID],
-            ),
+            [TABLE_COLUMNS.CHANNEL_ID]: hasChannel
+                ? value[TABLE_COLUMNS.CHANNEL_ID]
+                : "",
+            [TABLE_COLUMNS.CHANNEL_LINK]: hasChannel
+                ? getYouTubeChannelLink(value[TABLE_COLUMNS.CHANNEL_ID])
+                : "",
         };
     });
     return result.toSorted(
@@ -786,42 +876,7 @@ const convertTableData = (allCsvData) => {
     );
 };
 
-const onSubmitManual = async (e) => {
-    e.preventDefault(); // Prevent the form from submitting
-
-    $("#alert-container").empty(); // Clear old alerts
-    showLoading(BUTTON_SUBMIT_MANUAL_ID);
-
-    try {
-        const values = getFormManualFiles();
-        if (!values) {
-            hideLoading(BUTTON_SUBMIT_MANUAL_ID);
-            return;
-        }
-
-        const allCsvData = await getAllCsvData(values);
-        console.log("Manual Import Files:", values);
-        logRevenueSummary("Manual", allCsvData);
-
-        const tableData = convertTableData(allCsvData);
-
-        resetData(tableData);
-        // resetData(dataTable);
-
-        // Đóng modal sau khi xử lý thành công
-        $(`#${MODAL_MANUAL_ID}`).modal("hide");
-    } catch (error) {
-        console.log("error:", error);
-    }
-
-    hideLoading(BUTTON_SUBMIT_MANUAL_ID);
-};
-
-const submitManualBtn = getSubmitBtn(BUTTON_SUBMIT_MANUAL_ID);
-submitManualBtn.on("click", onSubmitManual);
-
-// Auto Submit
-const getFormAutoFiles = () => {
+const getImportFiles = () => {
     if (!folderFiles || folderFiles.length === 0) return;
 
     let fileList = folderFiles;
@@ -841,6 +896,10 @@ const getFormAutoFiles = () => {
         fileList,
         RULES.YOUTUBE_SHORTS_ADS,
     );
+    const shortsPoolRevenueFile = pickBestByRule(
+        fileList,
+        RULES.SHORTS_POOL_REVENUE,
+    );
     const subscriptionRevenueRedMusicFile = pickBestByRule(
         fileList,
         RULES.SUBSCRIPTION_REVENUE_RED_MUSIC,
@@ -848,6 +907,14 @@ const getFormAutoFiles = () => {
     const subscriptionRevenueRedFile = pickBestByRule(
         fileList,
         RULES.SUBSCRIPTION_REVENUE_RED,
+    );
+    const subscriptionAdjustmentsRevenueFile = pickBestByRule(
+        fileList,
+        RULES.SUBSCRIPTION_ADJUSTMENTS_REVENUE,
+    );
+    const audioTierRevenueFile = pickBestByRule(
+        fileList,
+        RULES.AUDIO_TIER_REVENUE,
     );
     const paidFeaturesFile = pickBestByRule(fileList, RULES.PAID_FEATURES);
     const adsAdjustmentsRevenueFile = pickBestByRule(
@@ -870,44 +937,47 @@ const getFormAutoFiles = () => {
         paidFeaturesFile,
         subscriptionRevenueRedFile,
         subscriptionRevenueRedMusicFile,
+        subscriptionAdjustmentsRevenueFile,
+        audioTierRevenueFile,
         youtubeShortsAdsFile,
         youtubeShortsSubscriptionFile,
+        shortsPoolRevenueFile,
         customAdjustmentsFile,
         affiliatePaymentSummaryFile,
     };
 };
 
-const onSubmitAuto = async (e) => {
+const onSubmitImport = async (e) => {
     e.preventDefault(); // Prevent the form from submitting
 
     $("#alert-container").empty(); // Clear old alerts
-    showLoading(BUTTON_SUBMIT_AUTO_ID);
+    showLoading(BUTTON_SUBMIT_IMPORT_ID);
 
     try {
-        const values = getFormAutoFiles();
-        console.log("File list:", values);
+        const values = getImportFiles();
+        console.log("Import Files:", values);
         if (!values) {
-            hideLoading(BUTTON_SUBMIT_AUTO_ID);
+            hideLoading(BUTTON_SUBMIT_IMPORT_ID);
             return;
         }
 
         const allCsvData = await getAllCsvData(values);
-        console.log("Auto Import Files:", values);
-        logRevenueSummary("Auto", allCsvData);
+        const revenueSummary = getRevenueSummary(values, allCsvData);
+        logRevenueSummary(revenueSummary);
 
         const tableData = convertTableData(allCsvData);
 
         resetData(tableData);
-        // resetData(dataTable);
+        renderRevenueSummary(revenueSummary, $("#month-select").val());
 
         // Đóng modal sau khi xử lý thành công
-        $(`#${MODAL_AUTO_ID}`).modal("hide");
+        $(`#${MODAL_IMPORT_ID}`).modal("hide");
     } catch (error) {
         console.log("error:", error);
     }
 
-    hideLoading(BUTTON_SUBMIT_AUTO_ID);
+    hideLoading(BUTTON_SUBMIT_IMPORT_ID);
 };
 
-const submitAutoBtn = getSubmitBtn(BUTTON_SUBMIT_AUTO_ID);
-submitAutoBtn.on("click", onSubmitAuto);
+const submitImportBtn = getSubmitBtn(BUTTON_SUBMIT_IMPORT_ID);
+submitImportBtn.on("click", onSubmitImport);

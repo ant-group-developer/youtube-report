@@ -36,20 +36,17 @@
                         Export Excel
                     </button>
                     <button type="button" class="btn btn-secondary" data-bs-toggle="modal"
-                        data-bs-target="#form-modal-manual">
+                        data-bs-target="#form-modal-import">
                         <i class="bi bi-database-up"></i>
-                        Manual Import Data
-                    </button>
-                    <button type="button" class="btn btn-secondary" data-bs-toggle="modal"
-                        data-bs-target="#form-modal-auto">
-                        <i class="bi bi-database-up"></i>
-                        Auto Import Data
+                        Import Data
                     </button>
                 </div>
             </div>
         </div>
 
         <div id="alert-container" class="mb-2"></div>
+
+        <div id="revenue-summary" class="mb-2 d-none"></div>
 
         <div class="rounded-2 border border-top-0 w-100">
             <table id="table" class="w-100 table table-striped">
@@ -126,12 +123,12 @@
         </nav>
     </div>
 
-    <!-- Modal Auto -->
-    <div class="modal fade" id="form-modal-auto" tabindex="-1" aria-labelledby="modal-label" aria-hidden="true">
+    <!-- Modal Import -->
+    <div class="modal fade" id="form-modal-import" tabindex="-1" aria-labelledby="modal-label" aria-hidden="true">
         <div class="modal-dialog modal-dialog-scrollable modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2 class="modal-title fs-5" id="modal-label">Import Report CSV File Auto</h2>
+                    <h2 class="modal-title fs-5" id="modal-label">Import Report Data</h2>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -150,7 +147,7 @@
                                 </div>
                             </div>
 
-                            <div id="auto-file-details" class="mb-3 row d-none">
+                            <div id="import-file-details" class="mb-3 row d-none">
                                 <div class="col-12 mb-3">
                                     <label for="month-select" class="form-label fw-medium">Available Months</label>
                                     <select id="month-select" class="form-select"></select>
@@ -178,229 +175,10 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <!-- Submit -->
-                    <button id="button-submit-auto" type="submit" class="btn btn-primary">Submit</button>
+                    <button id="button-submit-import" type="submit" class="btn btn-primary">Submit</button>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- Modal Manual -->
-    <div class="modal fade" id="form-modal-manual" tabindex="-1" aria-labelledby="modal-label" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-scrollable modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h1 class="modal-title fs-5" id="modal-label">Import Report CSV File Manually</h1>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="csv-form">
-                        <fieldset>
-                            <!-- Ads Adjustments Revenue -->
-                            <div class="mb-3 row">
-                                <div class="col-12">
-                                    <label for="ads-adjustments-revenue" class="form-label fw-medium">Ads
-                                        Adjustments
-                                        Revenue</label>
-                                </div>
-                                <div class="col-12">
-                                    <input type="file" accept=".csv" class="form-control" id="ads-adjustments-revenue"
-                                        required>
-                                    <div class="error-message text-danger" id="ads-adjustments-revenue-error"></div>
-                                </div>
-                                <div class="col-12">
-                                    <small class="text-muted">File name format example:
-                                        <ul>
-                                            <li>adjustment_month_video_summary_v1_1_20250701.csv</li>
-                                            <li>***_20250501_ADJ_video_summary_v1-1.csv</li>
-                                        </ul>
-                                    </small>
-                                </div>
-                            </div>
-
-                            <!-- Ads Revenue -->
-                            <div class="mb-3 row">
-                                <div class="col-12">
-                                    <label for="ads-revenue" class="form-label fw-medium">Ads Revenue</label>
-                                </div>
-                                <div class="col-12">
-                                    <input type="file" accept=".csv" class="form-control" id="ads-revenue" required>
-                                    <div class="error-message text-danger" id="ads-revenue-error"></div>
-                                </div>
-                                <div class="col-12">
-                                    <small class="text-muted">File name format example:
-                                        <ul>
-                                            <li>ads_partner_revenue_month_video_summary_v1_1_20250701.csv</li>
-                                            <li>***_20250501_video_summary_v1-1.csv</li>
-                                        </ul>
-                                    </small>
-                                </div>
-                            </div>
-
-                            <!-- Paid Features -->
-                            <div class="mb-3 row">
-                                <div class="col-12">
-                                    <label for="paid-features" class="form-label fw-medium">Paid Features</label>
-                                </div>
-                                <div class="col-12">
-                                    <input type="file" accept=".csv" class="form-control" id="paid-features" required>
-                                    <div class="error-message text-danger" id="paid-features-error"></div>
-                                </div>
-                                <div class="col-12">
-                                    <small class="text-muted">File name format example:
-                                        <ul>
-                                            <li>***_paid_features_M_20250701_20250731_v1-1.csv</li>
-                                        </ul>
-                                    </small>
-                                </div>
-                            </div>
-
-                            <!-- Subscription Revenue Red -->
-                            <div class="mb-3 row">
-                                <div class="col-12">
-                                    <label for="subscription-revenue-red" class="form-label fw-medium">Subscription
-                                        Revenue
-                                        Red</label>
-                                </div>
-                                <div class="col-12">
-                                    <input type="file" accept=".csv" class="form-control" id="subscription-revenue-red"
-                                        required>
-                                    <div class="error-message text-danger" id="subscription-revenue-red-error">
-                                    </div>
-                                </div>
-                                <div class="col-12">
-                                    <small class="text-muted">File name format example:
-                                        <ul>
-                                            <li>red_month_subscription_video_non_music_v1_1_20250701.csv</li>
-                                            <li>***_20250501_20250531_red_rawdata_video_v1-1.csv</li>
-                                        </ul>
-                                    </small>
-                                </div>
-                            </div>
-
-                            <!-- Subscription Revenue Red Music -->
-                            <div class="mb-3 row">
-                                <div class="col-12">
-                                    <label for="subscription-revenue-red-music"
-                                        class="form-label fw-medium">Subscription Revenue
-                                        Red
-                                        Music</label>
-                                </div>
-                                <div class="col-12">
-                                    <input type="file" accept=".csv" class="form-control"
-                                        id="subscription-revenue-red-music" required>
-                                    <div class="error-message text-danger" id="subscription-revenue-red-music-error">
-                                    </div>
-                                </div>
-                                <div class="col-12">
-                                    <small class="text-muted">File name format example:
-                                        <ul>
-                                            <li>red_month_subscription_video_v1_1_20250701.csv</li>
-                                            <li>***_20250501_20250531_red_music_rawdata_video_v1-1.csv</li>
-                                        </ul>
-                                    </small>
-                                </div>
-                            </div>
-
-                            <!-- YouTube Shorts Ads -->
-                            <div class="mb-3 row">
-                                <div class="col-12">
-                                    <label for="youtube-shorts-ads" class="form-label fw-medium">YouTube Shorts
-                                        Ads</label>
-                                </div>
-                                <div class="col-12">
-                                    <input type="file" accept=".csv" class="form-control" id="youtube-shorts-ads"
-                                        required>
-                                    <div class="error-message text-danger" id="youtube-shorts-ads-error"></div>
-                                </div>
-                                <div class="col-12">
-                                    <small class="text-muted">File name format example:
-                                        <ul>
-                                            <li>youtube_shorts_ads_revenue_month_youtube_shorts_ads_video_summary_v1_1_20250701.csv
-                                            </li>
-                                            <li>***_20250501_20250531_monthly_shorts_non_music_ads_video_summary_v1-0.csv
-                                            </li>
-                                        </ul>
-                                    </small>
-                                </div>
-                            </div>
-
-                            <!-- YouTube Shorts Subscription -->
-                            <div class="mb-3 row">
-                                <div class="col-12">
-                                    <label for="youtube-shorts-subscription" class="form-label fw-medium">YouTube
-                                        Shorts
-                                        Subscription</label>
-                                </div>
-                                <div class="col-12">
-                                    <input type="file" accept=".csv" class="form-control"
-                                        id="youtube-shorts-subscription" required>
-                                    <div class="error-message text-danger" id="youtube-shorts-subscription-error">
-                                    </div>
-                                </div>
-                                <div class="col-12">
-                                    <small class="text-muted">File name format example:
-                                        <ul>
-                                            <li>youtube_shorts_subscription_revenue_month_youtube_shorts_subscription_video_summary_v1_0_20250701.csv
-                                            </li>
-                                            <li>***_20250501_20250531_monthly_shorts_non_music_subscription_video_summary_v1-0.csv
-                                            </li>
-                                        </ul>
-                                    </small>
-                                </div>
-                            </div>
-
-                            <!-- Custom Adjustments -->
-                            <div class="mb-3 row">
-                                <div class="col-12">
-                                    <label for="custom-adjustments" class="form-label fw-medium">Custom
-                                        Adjustments</label>
-                                </div>
-                                <div class="col-12">
-                                    <input type="file" accept=".csv" class="form-control" id="custom-adjustments">
-                                    <div class="error-message text-danger" id="custom-adjustments-error"></div>
-                                </div>
-                                <div class="col-12">
-                                    <small class="text-muted">File name format example:
-                                        <ul>
-                                            <li>custom_month_channel_adjustments_v1_0_20250701.csv</li>
-                                            <li>***_channel_adjustments_summary_***.csv</li>
-                                        </ul>
-                                    </small>
-                                </div>
-                            </div>
-
-                            <!-- Affiliate Payment Summary -->
-                            <div class="mb-3 row">
-                                <div class="col-12">
-                                    <label for="affiliate-payment-summary" class="form-label fw-medium">Affiliate
-                                        Payment Summary</label>
-                                </div>
-                                <div class="col-12">
-                                    <input type="file" accept=".csv" class="form-control"
-                                        id="affiliate-payment-summary">
-                                    <div class="error-message text-danger" id="affiliate-payment-summary-error"></div>
-                                </div>
-                                <div class="col-12">
-                                    <small class="text-muted">File name format example:
-                                        <ul>
-                                            <li>custom_month_affiliate_tax_summary_v1_0_20250701.csv</li>
-                                            <li>***_M_202507_affiliate_payment_summary_v1-0.csv</li>
-                                        </ul>
-                                    </small>
-                                </div>
-                            </div>
-
-                        </fieldset>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <!-- Submit -->
-                    <button id="button-submit-manual" type="submit" class="btn btn-primary">Submit</button>
-                </div>
-            </div>
-        </div>
-    </div>
     </div>
 
 

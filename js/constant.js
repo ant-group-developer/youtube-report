@@ -1,8 +1,6 @@
-const BUTTON_SUBMIT_MANUAL_ID = "button-submit-manual";
-const BUTTON_SUBMIT_AUTO_ID = "button-submit-auto";
+const BUTTON_SUBMIT_IMPORT_ID = "button-submit-import";
 
-const MODAL_MANUAL_ID = "form-modal-manual";
-const MODAL_AUTO_ID = "form-modal-auto";
+const MODAL_IMPORT_ID = "form-modal-import";
 
 // ---- Rules (regex rõ ràng, tránh “_video_summary_” đụng hàng) --------------
 // Lưu ý: dùng case-insensitive, chặn nhầm bằng forbidden.
@@ -53,6 +51,31 @@ const RULES = {
             /(?:^|[_-])week(?:[_-]|$)/i,
             /(?:^|[_-])day(?:[_-]|$)/i,
         ],
+    },
+
+    SUBSCRIPTION_ADJUSTMENTS_REVENUE: {
+        // Điều chỉnh doanh thu Red Music: "adjustment_subscription_month_subscription_video_*"
+        // (cùng cấu trúc với file Red Music, kênh nằm ở cột "Video Channel ID")
+        requiredAny: [
+            /adjustment[_-]?subscription[_-]?month[_-]?subscription[_-]?video/i,
+        ],
+        forbidden: [
+            /non[_-]?music/i,
+            /(?:^|[_-])week(?:[_-]|$)/i,
+            /(?:^|[_-])day(?:[_-]|$)/i,
+        ],
+    },
+
+    AUDIO_TIER_REVENUE: {
+        // YouTube Music trên thiết bị: file chi tiết có "Video ID" nhưng không có "Channel ID"
+        requiredAny: [/audio[_-]?tier[_-]?partner[_-]?revenue[_-]?month.*detailed/i],
+        forbidden: [/(?:^|[_-])week(?:[_-]|$)/i, /(?:^|[_-])day(?:[_-]|$)/i],
+    },
+
+    SHORTS_POOL_REVENUE: {
+        // Shorts theo quốc gia: "shorts_partner_revenue_month_shorts_summary_*", không có "Channel ID"
+        requiredAny: [/(?:^|[_-])shorts[_-]?partner[_-]?revenue[_-]?month[_-]?shorts[_-]?summary/i],
+        forbidden: [/(?:^|[_-])week(?:[_-]|$)/i, /(?:^|[_-])day(?:[_-]|$)/i],
     },
 
     PAID_FEATURES: {
@@ -125,6 +148,42 @@ const CSV_COLUMNS = {
     TAX_WITHHOLDING_RATE: "Tax Withholding Rate",
     TAX_WITHHELD_AMOUNT: "Tax Withheld Amount",
     LOCAL_CURRENCY: "Local Currency",
+    VIDEO_ID: "Video ID",
+    COUNTRY: "Country",
+    SHORTS_PARTNER_REVENUE: "Shorts Partner Revenue (USD)",
+    REVENUE_SOURCE: "Revenue Source",
+    ADSENSE_EARNINGS_MONTH: "AdSense Earnings Month",
+    TOTAL_REVENUE_BY_SOURCE: "Total Revenue By Source",
+};
+
+// Nguồn doanh thu chỉ có trong affiliate payment summary (không có report doanh thu riêng).
+// Các nguồn còn lại của file này (Ads, Premium, Shorts, Paid Features...) đã được tính từ report tương ứng.
+// Revenue Source để trống là khoản thưởng (vd. "Shopping Affiliate Bonus" trong Payment summary).
+const AFFILIATE_ONLY_SOURCES = {
+    SHOPPING_AFFILIATE: {
+        LABEL: "Shopping Affiliate",
+        test: (source) => /shopping/i.test(source),
+    },
+    PFEDU: {
+        LABEL: "YouTube PfEdu",
+        test: (source) => /pfedu/i.test(source),
+    },
+    OTHER: {
+        LABEL: "Other (no revenue source)",
+        test: (source) => source === "",
+    },
+};
+
+// Doanh thu không gắn được vào kênh (report không có Channel ID) được gom thành dòng riêng trong bảng
+const NO_CHANNEL_ROWS = {
+    SHORTS_POOL: {
+        KEY: "no-channel:shorts-pool",
+        NAME: "YouTube Shorts revenue (country pool, no channel breakdown)",
+    },
+    AUDIO_TIER: {
+        KEY: "no-channel:audio-tier",
+        NAME: "Audio Tier revenue (video not matched to a channel)",
+    },
 };
 
 const MATH_OPERATIONS = {

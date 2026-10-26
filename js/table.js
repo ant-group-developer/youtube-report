@@ -51,27 +51,19 @@ const renderTable = (data, searchTerm = "") => {
             item[TABLE_COLUMNS.CHANNEL_NAME],
             searchTerm
         );
-        const usRevenue = formatNumber(
-            item[TABLE_COLUMNS.US_REVENUE],
-            searchTerm
-        );
+        const usRevenue = formatAmount(item[TABLE_COLUMNS.US_REVENUE]);
         const taxWithholdingRate = formatNumber(
             item[TABLE_COLUMNS.TAX_WITHHOLDING_RATE],
             searchTerm
         );
-        const taxWithHeldAmount = formatNumber(
-            item[TABLE_COLUMNS.TAX_WITHHELD_AMOUNT],
-            searchTerm
+        const taxWithHeldAmount = formatAmount(
+            item[TABLE_COLUMNS.TAX_WITHHELD_AMOUNT]
         );
-        const revenue = formatNumber(item[TABLE_COLUMNS.REVENUE], searchTerm);
-        const deductionAmount = formatNumber(
-            item[TABLE_COLUMNS.DEDUCTION_AMOUNT],
-            searchTerm
+        const revenue = formatAmount(item[TABLE_COLUMNS.REVENUE]);
+        const deductionAmount = formatAmount(
+            item[TABLE_COLUMNS.DEDUCTION_AMOUNT]
         );
-        const totalRevenue = formatNumber(
-            item[TABLE_COLUMNS.TOTAL_REVENUE],
-            searchTerm
-        );
+        const totalRevenue = formatAmount(item[TABLE_COLUMNS.TOTAL_REVENUE]);
         const note = item[TABLE_COLUMNS.NOTE] || "";
 
         let className = "";
@@ -87,14 +79,17 @@ const renderTable = (data, searchTerm = "") => {
                 className = "";
         }
 
+        // Dòng doanh thu không có kênh (Shorts theo quốc gia, Audio Tier chưa gắn kênh) không có link
+        const nameCell = link
+            ? `<a href="${link}" target="_blank" rel="noopener noreferrer">${name}</a>`
+            : `<span class="fst-italic">${name}</span>`;
+
         return `<tr>
                 <td data-field="Channel ID" title="${escapeHtml(uc)}" class="${className}">
                     ${highlightText(uc, searchTerm)}
                 </td>
                 <td data-field="Name" class="${className}">
-                    <a href="${link}" target="_blank" rel="noopener noreferrer">
-                        ${name}
-                    </a>
+                    ${nameCell}
                 </td>
                 <td data-field="US Revenue" class="${className}">
                     ${usRevenue}
@@ -246,15 +241,57 @@ const renderFooter = (data) => {
     const footerContent = `
         <td class="bg-dark-subtle">Total: ${data.length} channel(s)</td>
         <td class="bg-dark-subtle"></td>
-        <td class="bg-dark-subtle">${formatNumber(totalUsRevenue)}</td>
+        <td class="bg-dark-subtle">${formatAmount(totalUsRevenue)}</td>
         <td class="bg-dark-subtle"></td>
-        <td class="bg-dark-subtle">${formatNumber(totalTaxWithheldAmount)}</td>
-        <td class="bg-dark-subtle">${formatNumber(totalRevenue)}</td>
-        <td class="bg-dark-subtle">${formatNumber(totalDeductionAmount)}</td>
-        <td class="bg-dark-subtle">${formatNumber(totalFinalRevenue)}</td>
+        <td class="bg-dark-subtle">${formatAmount(totalTaxWithheldAmount)}</td>
+        <td class="bg-dark-subtle">${formatAmount(totalRevenue)}</td>
+        <td class="bg-dark-subtle">${formatAmount(totalDeductionAmount)}</td>
+        <td class="bg-dark-subtle">${formatAmount(totalFinalRevenue)}</td>
         <td class="bg-dark-subtle"></td>
         `;
     footer.html(footerContent);
+};
+
+// Bảng tổng doanh thu theo nguồn (để đối chiếu với Payment summary của YouTube)
+const renderRevenueSummary = (revenueSummary, monthKey) => {
+    const container = $("#revenue-summary");
+
+    const rows = revenueSummary.items
+        .map(
+            (item) => `<tr>
+                <td>${escapeHtml(item.label)}</td>
+                <td class="text-secondary text-break">${escapeHtml(item.file.name)}</td>
+                <td class="text-end text-nowrap">${formatAmount(item.amount)}</td>
+            </tr>`,
+        )
+        .join("");
+
+    container.html(`
+        <details class="border rounded-2 px-3 py-2" open>
+            <summary class="fw-medium">
+                Revenue by source ${escapeHtml(formatMonthKey(monthKey) || "")}:
+                ${formatAmount(revenueSummary.total)} USD
+            </summary>
+            <table class="table table-sm mb-0 mt-2">
+                <thead>
+                    <tr>
+                        <th>Source</th>
+                        <th>File</th>
+                        <th class="text-end">Partner Revenue (USD)</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+                <tfoot class="fw-semibold">
+                    <tr>
+                        <td>Total</td>
+                        <td></td>
+                        <td class="text-end text-nowrap">${formatAmount(revenueSummary.total)}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </details>
+    `);
+    container.removeClass("d-none");
 };
 
 // Function to change page

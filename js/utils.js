@@ -147,15 +147,24 @@ const getHeaderIndexes = (headerRow, headerKey) => {
 // Các dòng được gộp theo (kênh, loại điều chỉnh, thuế suất, tiền tệ) nên kết quả trả về
 // vẫn có dạng như từng dòng trước đây và các hàm process* cho ra cùng kết quả.
 // file: File, hoặc file nằm trong zip (openZipEntry) - chỉ cần có name và stream().
-const getCsvData = (file, headerKey, headerDetector) => {
+// options:
+// - rawId: giữ nguyên giá trị cột id (vd. Video ID, Country), không thêm tiền tố "UC"
+// - filters: [{ column, test }] - chỉ cộng các dòng mà giá trị (chuỗi) của mọi cột lọc thoả test
+// - videoChannels: Map Video ID -> Channel ID; các video có trong Map (giá trị null) được điền kênh
+//   khi file có cả cột "Video ID" và cột kênh
+const getCsvData = (file, headerKey, headerDetector, options = {}) => {
     if (!file) {
         return Promise.resolve([]);
     }
+
+    const { rawId = false, filters = [], videoChannels } = options;
 
     return new Promise((resolve, reject) => {
         const channels = new Map(); // uc -> { order, name } theo lần xuất hiện đầu tiên
         const groups = new Map();
         let indexes = null;
+        let filterIndexes = [];
+        let videoIdIndex = -1;
         let rowNumber = 0;
         const source = toPapaStream(file.stream());
 
@@ -169,10 +178,27 @@ const getCsvData = (file, headerKey, headerDetector) => {
                 if (!indexes) {
                     if ([].concat(headerDetector).some((name) => row.includes(name))) {
                         indexes = getHeaderIndexes(row, headerKey);
+                        filterIndexes = filters.map(({ column, test }) => ({
+                            index: row.indexOf(column),
+                            test,
+                        }));
+                        if (videoChannels) {
+                            videoIdIndex = row.indexOf(CSV_COLUMNS.VIDEO_ID);
+                        }
                     } else if (rowNumber >= MAX_HEADER_SEARCH_ROWS) {
                         parser.abort();
                         source.cancel();
                     }
+                    return;
+                }
+
+                // Cột lọc không có trong file => không dòng nào thoả
+                if (
+                    filterIndexes.some(
+                        ({ index, test }) =>
+                            index === -1 || !test(String(row[index] ?? "")),
+                    )
+                ) {
                     return;
                 }
 
@@ -184,7 +210,14 @@ const getCsvData = (file, headerKey, headerDetector) => {
                 );
                 const channelLocalCurrency = getCellData(row, indexes.localCurrency);
 
-                const uc = ensureUcPrefix(channelId);
+                const uc = rawId ? String(channelId) : ensureUcPrefix(channelId);
+
+                if (videoIdIndex !== -1 && channelId) {
+                    const videoId = String(row[videoIdIndex] ?? "");
+                    if (videoChannels.get(videoId) === null) {
+                        videoChannels.set(videoId, detachString(uc));
+                    }
+                }
 
                 let channel = channels.get(uc);
                 if (!channel) {
@@ -263,69 +296,17 @@ const ensureUcPrefix = (channelId) => {
     return channelId;
 };
 
-// Validate function to check if the selected file is a CSV
-function validateFileInput(inputId, errorId) {
-    const fileInput = document.getElementById(inputId);
-    const errorMessage = document.getElementById(errorId);
-
-    const file = fileInput.files[0]; // Get the selected file
-    if (!file) {
-        errorMessage.textContent = "Please select a CSV file.";
-        fileInput.classList.add("is-invalid");
-        fileInput.classList.remove("is-valid");
-        return false;
-    }
-
-    const fileType = file.type;
-    if (fileType !== "text/csv" && !file.name.endsWith(".csv")) {
-        errorMessage.textContent = "Please select a valid CSV file.";
-        fileInput.classList.add("is-invalid");
-        fileInput.classList.remove("is-valid");
-        return false;
-    }
-
-    // If file is valid
-    errorMessage.textContent = ""; // Clear error message
-    fileInput.classList.remove("is-invalid");
-    fileInput.classList.add("is-valid");
-    return true;
-}
-
-const validateCsvFile = (inputId, errorId) => {
-    const fileInput = document.getElementById(inputId);
-    const errorMessage = document.getElementById(errorId);
-
-    const files = fileInput.files;
-    if (!files || files.length === 0) {
-        return false;
-    }
-
-    let isValid = true;
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        if (file.type !== "text/csv" && !file.name.endsWith(".csv")) {
-            isValid = false;
-            break;
-        }
-    }
-
-    if (!isValid) {
-        errorMessage.textContent = "Please select valid CSV files only.";
-        fileInput.classList.add("is-invalid");
-        fileInput.classList.remove("is-valid");
-        return false;
-    }
-
-    // If file is valid
-    errorMessage.textContent = ""; // Clear error message
-    fileInput.classList.remove("is-invalid");
-    fileInput.classList.add("is-valid");
-    return true;
-};
-
 const formatNumber = (number) => {
     return new Intl.NumberFormat("en-US").format(number);
 };
+
+// Số tiền: luôn 2 chữ số thập phân (chỉ làm tròn khi hiển thị, dữ liệu vẫn giữ đủ độ chính xác)
+const AMOUNT_FORMAT = new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    signDisplay: "negative",
+});
+const formatAmount = (number) => AMOUNT_FORMAT.format(number);
 
 // ---- Helpers ---------------------------------------------------------------
 const parseVersionWeight = (name) => {

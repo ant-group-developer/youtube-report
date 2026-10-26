@@ -145,7 +145,7 @@ async function* generateXlsxSheet(data, columns) {
         const values = columns.map((col) => {
             const rawValue = record[col.key];
             let value = col.format ? col.format(rawValue, record) : rawValue;
-            // Cột số: ghi dạng number (dữ liệu bảng là chuỗi từ toFixed) để Excel tính toán được
+            // Cột số: ghi dạng number (kể cả giá trị là chuỗi số, vd. thuế suất từ CSV) để Excel tính toán được
             if (col.numFmt && value !== "" && value !== null && !isNaN(Number(value))) {
                 value = Number(value);
             }
