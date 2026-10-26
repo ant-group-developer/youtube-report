@@ -176,110 +176,133 @@ const getCellData = (row, cellIndex) => {
     return row[cellIndex];
 };
 
-const readFile = (file) => {
+// Header của báo cáo YouTube luôn nằm trong vài dòng đầu (sau các dòng tiêu đề/metadata).
+// Quá số dòng này mà chưa thấy header thì file không đúng định dạng => dừng đọc sớm.
+const MAX_HEADER_SEARCH_ROWS = 50;
+
+const getHeaderIndexes = (headerRow, headerKey) => {
+    const indexOf = (name) => headerRow.findIndex((item) => item === name);
+    return {
+        channelId: indexOf(headerKey.id),
+        channelName: indexOf(headerKey.name),
+        revenue: indexOf(headerKey.revenue),
+        deductionAmount: indexOf(headerKey.deductionAmount),
+        adjustmentType: indexOf(headerKey.adjustmentType),
+        usSourcedRevenue: indexOf(headerKey.usSourcedRevenue),
+        taxWithholdingRate: indexOf(headerKey.taxWithholdingRate),
+        taxWithheldAmount: indexOf(headerKey.taxWithheldAmount),
+        localCurrency: headerRow.findIndex(
+            (item) =>
+                item === (headerKey && headerKey.localCurrency) ||
+                item === CSV_COLUMNS.LOCAL_CURRENCY,
+        ),
+    };
+};
+
+// Đọc CSV dạng stream và cộng dồn ngay trong lúc đọc, KHÔNG giữ lại từng dòng:
+// file báo cáo có thể nặng hàng GB, giữ toàn bộ dòng sẽ gây "out of memory".
+// Các dòng được gộp theo (kênh, loại điều chỉnh, thuế suất, tiền tệ) nên kết quả trả về
+// vẫn có dạng như từng dòng trước đây và các hàm process* cho ra cùng kết quả.
+const getCsvData = (file, headerKey, headerDetector) => {
+    if (!file) {
+        return Promise.resolve([]);
+    }
+
     return new Promise((resolve, reject) => {
-        const results = [];
+        const channels = new Map(); // uc -> { order, name } theo lần xuất hiện đầu tiên
+        const groups = new Map();
+        let indexes = null;
+        let rowNumber = 0;
+
         Papa.parse(file, {
             skipEmptyLines: true,
             dynamicTyping: true, // Auto-converts data types like number, boolean
-            step: (row) => {
-                // Process each row here and push to results
-                results.push(row.data); // Store data incrementally
+            step: (results, parser) => {
+                const row = results.data;
+                rowNumber++;
+
+                if (!indexes) {
+                    if (row.includes(headerDetector)) {
+                        indexes = getHeaderIndexes(row, headerKey);
+                    } else if (rowNumber >= MAX_HEADER_SEARCH_ROWS) {
+                        parser.abort();
+                    }
+                    return;
+                }
+
+                const channelId = getCellData(row, indexes.channelId) || "";
+                const channelAdjustmentType = getCellData(row, indexes.adjustmentType);
+                const channelTaxWithholdingRate = getCellData(
+                    row,
+                    indexes.taxWithholdingRate,
+                );
+                const channelLocalCurrency = getCellData(row, indexes.localCurrency);
+
+                const uc = ensureUcPrefix(channelId);
+
+                let channel = channels.get(uc);
+                if (!channel) {
+                    channel = {
+                        order: channels.size,
+                        name: getCellData(row, indexes.channelName) || uc,
+                    };
+                    channels.set(uc, channel);
+                }
+
+                const key = `${uc}\u0000${channelAdjustmentType}\u0000${channelTaxWithholdingRate}\u0000${channelLocalCurrency}`;
+                let group = groups.get(key);
+                if (!group) {
+                    group = {
+                        channel,
+                        lastRow: 0,
+                        channelId: uc,
+                        channelRev: 0,
+                        channelDeductionAmount: 0,
+                        channelAdjustmentType,
+                        channelUsSourcedRevenue: 0,
+                        channelTaxWithheldAmount: 0,
+                        channelTaxWithholdingRate,
+                        channelLocalCurrency,
+                    };
+                    groups.set(key, group);
+                }
+
+                group.lastRow = rowNumber;
+                group.channelRev += parseFloat(
+                    getCellData(row, indexes.revenue) || "0",
+                );
+                group.channelDeductionAmount += parseFloat(
+                    getCellData(row, indexes.deductionAmount) || "0",
+                );
+                group.channelUsSourcedRevenue += parseFloat(
+                    getCellData(row, indexes.usSourcedRevenue) || "0",
+                );
+                group.channelTaxWithheldAmount += parseFloat(
+                    getCellData(row, indexes.taxWithheldAmount) || "0",
+                );
             },
             complete: () => {
-                resolve(results); // Resolve after complete processing
+                // Giữ thứ tự kênh theo lần xuất hiện đầu tiên; trong cùng một kênh, nhóm chứa
+                // dòng cuối cùng đứng sau cùng để các giá trị "dòng sau ghi đè" (Note, thuế suất)
+                // giống như khi xử lý từng dòng.
+                const data = Array.from(groups.values())
+                    .sort(
+                        (a, b) =>
+                            a.channel.order - b.channel.order ||
+                            a.lastRow - b.lastRow,
+                    )
+                    .map(({ channel, lastRow, ...group }) => ({
+                        ...group,
+                        channelName: channel.name,
+                        fileName: file.name,
+                    }));
+                resolve(data);
             },
             error: (err) => {
                 reject(err); // Reject on error
             },
         });
     });
-};
-
-const getCsvData = async (file, headerKey, headerDetector) => {
-    if (!file) {
-        return [];
-    }
-
-    const rows = await readFile(file);
-    const headerRowIndex = rows.findIndex((value) =>
-        value.includes(headerDetector),
-    );
-
-    if (headerRowIndex === -1) {
-        return [];
-    }
-
-    const data = [];
-
-    const headerRow = rows[headerRowIndex];
-    const channelIdIndex = headerRow.findIndex((item) => item === headerKey.id);
-    const channelNameIndex = headerRow.findIndex(
-        (item) => item === headerKey.name,
-    );
-    const channelRevIndex = headerRow.findIndex(
-        (item) => item === headerKey.revenue,
-    );
-
-    const deductionAmountIndex = headerRow.findIndex(
-        (item) => item === headerKey.deductionAmount,
-    );
-    const adjustmentTypeIndex = headerRow.findIndex(
-        (item) => item === headerKey.adjustmentType,
-    );
-
-    const usSourcedRevenueIndex = headerRow.findIndex(
-        (item) => item === headerKey.usSourcedRevenue,
-    );
-    const taxWithholdingRateIndex = headerRow.findIndex(
-        (item) => item === headerKey.taxWithholdingRate,
-    );
-    const taxWithheldAmountIndex = headerRow.findIndex(
-        (item) => item === headerKey.taxWithheldAmount,
-    );
-    const localCurrencyIndex = headerRow.findIndex(
-        (item) =>
-            item === (headerKey && headerKey.localCurrency) ||
-            item === CSV_COLUMNS.LOCAL_CURRENCY,
-    );
-
-    for (i = headerRowIndex + 1; i < rows.length; i++) {
-        const row = rows[i];
-        const channelId = getCellData(row, channelIdIndex) || "";
-        const channelName = getCellData(row, channelNameIndex);
-        const channelRev = getCellData(row, channelRevIndex);
-        const channelDeductionAmount = getCellData(row, deductionAmountIndex);
-        const channelAdjustmentType = getCellData(row, adjustmentTypeIndex);
-        const channelUsSourcedRevenue = getCellData(row, usSourcedRevenueIndex);
-        const channelTaxWithholdingRate = getCellData(
-            row,
-            taxWithholdingRateIndex,
-        );
-        const channelTaxWithheldAmount = getCellData(
-            row,
-            taxWithheldAmountIndex,
-        );
-        const channelLocalCurrency = getCellData(row, localCurrencyIndex);
-
-        const uc = ensureUcPrefix(channelId);
-
-        data.push({
-            channelId: uc,
-            channelName: channelName || uc,
-            channelRev: parseFloat(channelRev || "0"),
-            channelDeductionAmount: parseFloat(channelDeductionAmount || "0"),
-            channelAdjustmentType,
-            channelUsSourcedRevenue: parseFloat(channelUsSourcedRevenue || "0"),
-            channelTaxWithheldAmount: parseFloat(
-                channelTaxWithheldAmount || "0",
-            ),
-            channelTaxWithholdingRate,
-            channelLocalCurrency,
-            fileName: file.name,
-        });
-    }
-
-    return data;
 };
 
 const ensureUcPrefix = (channelId) => {
