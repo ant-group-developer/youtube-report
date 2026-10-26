@@ -217,6 +217,14 @@ const TABLE_COLUMNS = {
     NOTE: "Note",
 };
 
+// Số chữ số thập phân khi hiển thị số tiền trên bảng và trong file Excel (ô "Decimal places")
+const DECIMAL_PLACES = {
+    DEFAULT: 2,
+    MIN: 0,
+    MAX: 12, // report YouTube có tối đa 12 chữ số thập phân
+};
+
+// numFmt: "Amount" = số tiền, định dạng theo số chữ số thập phân đang chọn; "General" = giữ nguyên
 const EXCEL_COLUMNS = [
     {
         name: TABLE_COLUMNS.CHANNEL_ID,
@@ -241,7 +249,7 @@ const EXCEL_COLUMNS = [
         key: TABLE_COLUMNS.US_REVENUE,
         width: 20,
         align: "right",
-        numFmt: "#,##0.00",
+        numFmt: "Amount",
     },
     {
         name: TABLE_COLUMNS.TAX_WITHHOLDING_RATE,
@@ -255,28 +263,28 @@ const EXCEL_COLUMNS = [
         key: TABLE_COLUMNS.TAX_WITHHELD_AMOUNT,
         width: 20,
         align: "right",
-        numFmt: "#,##0.00",
+        numFmt: "Amount",
     },
     {
         name: TABLE_COLUMNS.REVENUE,
         key: TABLE_COLUMNS.REVENUE,
         width: 20,
         align: "right",
-        numFmt: "#,##0.00",
+        numFmt: "Amount",
     },
     {
         name: TABLE_COLUMNS.DEDUCTION_AMOUNT,
         key: TABLE_COLUMNS.DEDUCTION_AMOUNT,
         width: 20,
         align: "right",
-        numFmt: "#,##0.00",
+        numFmt: "Amount",
     },
     {
         name: TABLE_COLUMNS.TOTAL_REVENUE,
         key: TABLE_COLUMNS.TOTAL_REVENUE,
         width: 20,
         align: "right",
-        numFmt: "#,##0.00",
+        numFmt: "Amount",
     },
     {
         name: TABLE_COLUMNS.NOTE,

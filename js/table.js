@@ -4,6 +4,9 @@ let filteredData = dataTableGlobal; // Dữ liệu đã lọc (ban đầu bằng
 const pageSize = 30;
 let currentPage = 1;
 
+let decimalPlaces = DECIMAL_PLACES.DEFAULT; // số chữ số thập phân của số tiền (ô "Decimal places")
+let lastRevenueSummary = null; // { revenueSummary, monthKey } để vẽ lại khi đổi số chữ số thập phân
+
 // Lọc dữ liệu với phân trang
 const getDataPaginated = (data, page) => {
     const offset = (page - 1) * pageSize;
@@ -51,19 +54,27 @@ const renderTable = (data, searchTerm = "") => {
             item[TABLE_COLUMNS.CHANNEL_NAME],
             searchTerm
         );
-        const usRevenue = formatAmount(item[TABLE_COLUMNS.US_REVENUE]);
+        const usRevenue = formatAmount(
+            item[TABLE_COLUMNS.US_REVENUE],
+            decimalPlaces
+        );
         const taxWithholdingRate = formatNumber(
             item[TABLE_COLUMNS.TAX_WITHHOLDING_RATE],
             searchTerm
         );
         const taxWithHeldAmount = formatAmount(
-            item[TABLE_COLUMNS.TAX_WITHHELD_AMOUNT]
+            item[TABLE_COLUMNS.TAX_WITHHELD_AMOUNT],
+            decimalPlaces
         );
-        const revenue = formatAmount(item[TABLE_COLUMNS.REVENUE]);
+        const revenue = formatAmount(item[TABLE_COLUMNS.REVENUE], decimalPlaces);
         const deductionAmount = formatAmount(
-            item[TABLE_COLUMNS.DEDUCTION_AMOUNT]
+            item[TABLE_COLUMNS.DEDUCTION_AMOUNT],
+            decimalPlaces
         );
-        const totalRevenue = formatAmount(item[TABLE_COLUMNS.TOTAL_REVENUE]);
+        const totalRevenue = formatAmount(
+            item[TABLE_COLUMNS.TOTAL_REVENUE],
+            decimalPlaces
+        );
         const note = item[TABLE_COLUMNS.NOTE] || "";
 
         let className = "";
@@ -241,12 +252,12 @@ const renderFooter = (data) => {
     const footerContent = `
         <td class="bg-dark-subtle">Total: ${data.length} channel(s)</td>
         <td class="bg-dark-subtle"></td>
-        <td class="bg-dark-subtle">${formatAmount(totalUsRevenue)}</td>
+        <td class="bg-dark-subtle">${formatAmount(totalUsRevenue, decimalPlaces)}</td>
         <td class="bg-dark-subtle"></td>
-        <td class="bg-dark-subtle">${formatAmount(totalTaxWithheldAmount)}</td>
-        <td class="bg-dark-subtle">${formatAmount(totalRevenue)}</td>
-        <td class="bg-dark-subtle">${formatAmount(totalDeductionAmount)}</td>
-        <td class="bg-dark-subtle">${formatAmount(totalFinalRevenue)}</td>
+        <td class="bg-dark-subtle">${formatAmount(totalTaxWithheldAmount, decimalPlaces)}</td>
+        <td class="bg-dark-subtle">${formatAmount(totalRevenue, decimalPlaces)}</td>
+        <td class="bg-dark-subtle">${formatAmount(totalDeductionAmount, decimalPlaces)}</td>
+        <td class="bg-dark-subtle">${formatAmount(totalFinalRevenue, decimalPlaces)}</td>
         <td class="bg-dark-subtle"></td>
         `;
     footer.html(footerContent);
@@ -254,6 +265,7 @@ const renderFooter = (data) => {
 
 // Bảng tổng doanh thu theo nguồn (để đối chiếu với Payment summary của YouTube)
 const renderRevenueSummary = (revenueSummary, monthKey) => {
+    lastRevenueSummary = { revenueSummary, monthKey };
     const container = $("#revenue-summary");
 
     const rows = revenueSummary.items
@@ -261,7 +273,7 @@ const renderRevenueSummary = (revenueSummary, monthKey) => {
             (item) => `<tr>
                 <td>${escapeHtml(item.label)}</td>
                 <td class="text-secondary text-break">${escapeHtml(item.file.name)}</td>
-                <td class="text-end text-nowrap">${formatAmount(item.amount)}</td>
+                <td class="text-end text-nowrap">${formatAmount(item.amount, decimalPlaces)}</td>
             </tr>`,
         )
         .join("");
@@ -270,7 +282,7 @@ const renderRevenueSummary = (revenueSummary, monthKey) => {
         <details class="border rounded-2 px-3 py-2" open>
             <summary class="fw-medium">
                 Revenue by source ${escapeHtml(formatMonthKey(monthKey) || "")}:
-                ${formatAmount(revenueSummary.total)} USD
+                ${formatAmount(revenueSummary.total, decimalPlaces)} USD
             </summary>
             <table class="table table-sm mb-0 mt-2">
                 <thead>
@@ -285,7 +297,7 @@ const renderRevenueSummary = (revenueSummary, monthKey) => {
                     <tr>
                         <td>Total</td>
                         <td></td>
-                        <td class="text-end text-nowrap">${formatAmount(revenueSummary.total)}</td>
+                        <td class="text-end text-nowrap">${formatAmount(revenueSummary.total, decimalPlaces)}</td>
                     </tr>
                 </tfoot>
             </table>
@@ -336,6 +348,31 @@ $("#search").on("input", function () {
     changePage(currentPage);
 });
 
+// Số chữ số thập phân: áp dụng ngay khi nhập số hợp lệ, vẽ lại bảng (giữ trang hiện tại)
+$("#decimal-places")
+    .on("input", function () {
+        const value = Number($(this).val());
+        if (
+            $(this).val() === "" ||
+            !Number.isInteger(value) ||
+            value < DECIMAL_PLACES.MIN ||
+            value > DECIMAL_PLACES.MAX
+        ) {
+            return; // đang nhập dở hoặc ngoài khoảng: giữ giá trị cũ
+        }
+        decimalPlaces = value;
+        changePage(currentPage);
+        if (lastRevenueSummary) {
+            renderRevenueSummary(
+                lastRevenueSummary.revenueSummary,
+                lastRevenueSummary.monthKey,
+            );
+        }
+    })
+    .on("change", function () {
+        $(this).val(decimalPlaces); // trả ô nhập về giá trị đang áp dụng nếu nhập sai
+    });
+
 // Initial render
 changePage(currentPage);
 
@@ -344,7 +381,7 @@ $("#export").on("click", async function () {
     const exportBtn = $(this);
     exportBtn.prop("disabled", true); // Tránh bấm nhiều lần khi đang xuất file lớn
     try {
-        await exportExcel(filteredData);
+        await exportExcel(filteredData, decimalPlaces);
     } catch (error) {
         console.error("Export failed:", error);
         alert(`Export failed: ${error.message}`);

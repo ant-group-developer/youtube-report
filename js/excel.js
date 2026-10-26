@@ -22,19 +22,24 @@ const XLSX_ROW_VARIANTS = [
     { fontId: 3, fillId: 4 },
 ];
 const XLSX_ALIGNS = ["left", "right"];
-const XLSX_NUM_FMTS = { General: 0, "#,##0.00": 4 }; // numFmtId có sẵn của Excel
+// General: numFmtId có sẵn của Excel; Amount: định dạng tự khai báo (id >= 164) theo số chữ số thập phân
+const XLSX_NUM_FMTS = { General: 0, Amount: 164 };
 const XLSX_HEADER_STYLE = 1;
+
+// Số tiền hiển thị theo số chữ số thập phân đang chọn; ô vẫn giữ giá trị đầy đủ để SUM ra đúng tổng
+const getXlsxAmountFormatCode = (decimalPlaces) =>
+    decimalPlaces > 0 ? `#,##0.${"0".repeat(decimalPlaces)}` : "#,##0";
 
 const getXlsxStyle = (variant, align, numFmtId) =>
     2 +
     variant * XLSX_ALIGNS.length * 2 +
     XLSX_ALIGNS.indexOf(align) * 2 +
-    (numFmtId === XLSX_NUM_FMTS["#,##0.00"] ? 1 : 0);
+    (numFmtId === XLSX_NUM_FMTS.Amount ? 1 : 0);
 
-const buildXlsxStyles = () => {
+const buildXlsxStyles = (decimalPlaces) => {
     const dataXfs = XLSX_ROW_VARIANTS.flatMap(({ fontId, fillId }) =>
         XLSX_ALIGNS.flatMap((align) =>
-            [XLSX_NUM_FMTS.General, XLSX_NUM_FMTS["#,##0.00"]].map(
+            [XLSX_NUM_FMTS.General, XLSX_NUM_FMTS.Amount].map(
                 (numFmtId) =>
                     `<xf numFmtId="${numFmtId}" fontId="${fontId}" fillId="${fillId}" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="${align}" vertical="center"/></xf>`,
             ),
@@ -46,6 +51,7 @@ const buildXlsxStyles = () => {
 
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<numFmts count="1"><numFmt numFmtId="${XLSX_NUM_FMTS.Amount}" formatCode="${getXlsxAmountFormatCode(decimalPlaces)}"/></numFmts>
 <fonts count="4">
 <font><sz val="11"/><name val="Calibri"/><family val="2"/></font>
 <font><b/><sz val="12"/><color rgb="${XLSX_COLORS.HEADER_FONT}"/></font>
@@ -172,7 +178,7 @@ async function* generateXlsxSheet(data, columns) {
     yield `${xml}</sheetData>\n</worksheet>`;
 }
 
-const buildXlsxBlob = (data, columns = EXCEL_COLUMNS) => {
+const buildXlsxBlob = (data, decimalPlaces, columns = EXCEL_COLUMNS) => {
     if (data.length + 1 > XLSX_MAX_ROWS) {
         throw new Error(
             `Too many rows for one Excel sheet (${data.length}, max ${XLSX_MAX_ROWS - 1}).`,
@@ -210,7 +216,7 @@ const buildXlsxBlob = (data, columns = EXCEL_COLUMNS) => {
                     `${XML_HEAD}<Relationships xmlns="${NS_PKG_REL}"><Relationship Id="rId1" Type="${NS_REL}/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="${NS_REL}/styles" Target="styles.xml"/><Relationship Id="rId3" Type="${NS_REL}/sharedStrings" Target="sharedStrings.xml"/></Relationships>`,
                 ],
             },
-            { name: "xl/styles.xml", chunks: [buildXlsxStyles()] },
+            { name: "xl/styles.xml", chunks: [buildXlsxStyles(decimalPlaces)] },
             {
                 name: "xl/sharedStrings.xml",
                 chunks: [
@@ -226,8 +232,8 @@ const buildXlsxBlob = (data, columns = EXCEL_COLUMNS) => {
     );
 };
 
-const exportExcel = async (data) => {
-    const blob = await buildXlsxBlob(data);
+const exportExcel = async (data, decimalPlaces) => {
+    const blob = await buildXlsxBlob(data, decimalPlaces);
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;

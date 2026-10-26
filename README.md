@@ -20,6 +20,7 @@ A client-side web application for importing, aggregating, and analyzing YouTube 
   - Audio Tier reports have no Channel ID: revenue is matched to channels by Video ID using the Ads / Subscription reports; unmatched videos are grouped into one row.
   - The Shorts country pool report has no channel breakdown: it is shown as its own row.
 - **Revenue by Source**: Shows the total of each revenue source and the file it came from, to reconcile with the Payment summary in YouTube Studio.
+- **Decimal Places**: Choose how many decimal places (0–12, default 2) amounts are rounded to in the table and the Excel export. Rounding is display-only: amounts keep full precision, so totals and Excel `SUM` match the source reports.
 - **Search and Pagination**: Quickly find specific channels using the search bar and navigate through large datasets with built-in pagination.
 - **Excel Export**: Export the aggregated report table seamlessly to an `.xlsx` file for offline use.
 

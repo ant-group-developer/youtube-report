@@ -300,13 +300,21 @@ const formatNumber = (number) => {
     return new Intl.NumberFormat("en-US").format(number);
 };
 
-// Số tiền: luôn 2 chữ số thập phân (chỉ làm tròn khi hiển thị, dữ liệu vẫn giữ đủ độ chính xác)
-const AMOUNT_FORMAT = new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-    signDisplay: "negative",
-});
-const formatAmount = (number) => AMOUNT_FORMAT.format(number);
+// Số tiền: làm tròn khi hiển thị theo số chữ số thập phân đang chọn (dữ liệu vẫn giữ đủ độ chính xác)
+const amountFormats = new Map(); // số chữ số thập phân -> Intl.NumberFormat
+const formatAmount = (number, decimalPlaces) => {
+    let format = amountFormats.get(decimalPlaces);
+    if (!format) {
+        format = new Intl.NumberFormat("en-US", {
+            minimumFractionDigits: decimalPlaces,
+            maximumFractionDigits: decimalPlaces,
+            signDisplay: "negative",
+        });
+        amountFormats.set(decimalPlaces, format);
+    }
+    // |giá trị| < 1e-9 là sai số khi cộng trừ (vd. doanh thu bị khấu trừ hết) => hiển thị 0
+    return format.format(Math.abs(number) < 1e-9 ? 0 : number);
+};
 
 // ---- Helpers ---------------------------------------------------------------
 const parseVersionWeight = (name) => {
