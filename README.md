@@ -38,8 +38,9 @@ Since this is a vanilla JS application running locally, there are no environment
   - [Bootstrap 5.3.7](https://getbootstrap.com/docs/5.3/getting-started/introduction/) for styling.
   - [jQuery 3.7.1](https://jquery.com/) for DOM manipulation.
   - [PapaParse 5.4.1](https://www.papaparse.com/) for fast CSV parsing in-browser.
-  - [JSZip 3.10.1](https://stuk.github.io/jszip/) for reading and unpacking YouTube's zip packages seamlessly in-memory.
-  - [ExcelJS 4.4.0](https://github.com/exceljs/exceljs) for generating Excel export files.
+- **Built-in streaming helpers** (no extra libraries, using the browser's native `CompressionStream` / `DecompressionStream`):
+  - `js/zip.js` reads YouTube's zip packages entry by entry and writes zip files, without loading whole files into memory.
+  - `js/excel.js` generates the `.xlsx` export row block by row block, so reports with hundreds of thousands of channels export without running out of memory.
 
 ## License
 

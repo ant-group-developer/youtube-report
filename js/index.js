@@ -61,19 +61,18 @@ async function scanDirectory(dirHandle) {
 
                 let zipUseful = false;
                 try {
+                    // Chỉ đọc danh sách file trong zip; nội dung được giải nén dần khi Submit (js/zip.js)
                     const zipFile = await entry.getFile();
-                    const zip = await JSZip.loadAsync(zipFile);
-                    
-                    for (const [relativePath, zipEntry] of Object.entries(zip.files)) {
-                        if (!zipEntry.dir && relativePath.toLowerCase().endsWith('.csv')) {
-                            
+                    const zipEntries = await readZipEntries(zipFile);
+
+                    for (const zipEntry of zipEntries) {
+                        if (!zipEntry.dir && zipEntry.name.toLowerCase().endsWith('.csv')) {
+
                             const isNeeded = allRules.some(rule => matchesRule(zipEntry.name, rule));
-                            
+
                             if (isNeeded) {
                                 zipUseful = true;
-                                const blob = await zipEntry.async("blob");
-                                const innerFile = new File([blob], zipEntry.name, { type: "text/csv" });
-                                folderFiles.push(innerFile);
+                                folderFiles.push(await openZipEntry(zipFile, zipEntry));
                             }
                         }
                     }

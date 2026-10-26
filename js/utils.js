@@ -33,128 +33,6 @@ const hideLoading = (buttonId) => {
     submitBtn.html("Submit");
 };
 
-const exportExcel = (data) => {
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Sheet 1", {
-        views: [{ state: "frozen", ySplit: 1, xSplit: 2 }],
-    });
-
-    // === 1. KHAI BÁO CỘT ===
-    worksheet.columns = EXCEL_COLUMNS.map((col) => ({
-        header: col.name,
-        key: col.key,
-        width: col.width ?? 20,
-    }));
-    const columnAlignMap = Object.fromEntries(
-        EXCEL_COLUMNS.map((col) => [col.key, col.align ?? "left"]),
-    );
-    const columnNumFmtMap = Object.fromEntries(
-        EXCEL_COLUMNS.filter((col) => col.numFmt).map((col) => [col.key, col.numFmt]),
-    );
-
-    const headerRowNumber = 1;
-
-    // === HEADER ===
-    const headerRow = worksheet.getRow(headerRowNumber);
-    headerRow.values = worksheet.columns.map((col) => col.header ?? "");
-    headerRow.eachCell((cell) => {
-        cell.fill = {
-            type: "pattern",
-            pattern: "solid",
-            fgColor: { argb: "FF305496" },
-        };
-        cell.font = {
-            color: { argb: "FFFFFFFF" },
-            bold: true,
-            size: 12,
-        };
-        cell.border = {
-            top: { style: "thin" },
-            left: { style: "thin" },
-            bottom: { style: "thin" },
-            right: { style: "thin" },
-        };
-        cell.alignment = {
-            vertical: "middle",
-            horizontal: "center",
-            wrapText: true,
-        };
-    });
-
-    // === DỮ LIỆU ===
-    const startDataRow = headerRowNumber + 1;
-    data.forEach((record, index) => {
-        const rowData = { stt: index + 1 };
-        EXCEL_COLUMNS.forEach((col) => {
-            const rawValue = record[col.key];
-            let value = col.format ? col.format(rawValue, record) : rawValue;
-            // Cột số: ghi dạng number (dữ liệu bảng là chuỗi từ toFixed) để Excel tính toán được
-            if (col.numFmt && value !== "" && value !== null && !isNaN(Number(value))) {
-                value = Number(value);
-            }
-            rowData[col.key] = value;
-        });
-        worksheet.insertRow(index + startDataRow, rowData);
-    });
-
-    // === FONT & BORDER ===
-    worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-        if (rowNumber <= headerRowNumber) return; // Bỏ dòng trước Header
-
-        if (row.values.includes(ADJUSTMENT_TYPES.CREDIT_APPEAL.VALUE)) {
-            row.font = { name: "Arial", size: 12, color: { argb: "FFFFFFFF" } };
-            row.fill = {
-                type: "pattern",
-                pattern: "solid",
-                fgColor: { argb: "FF198754" },
-            };
-        } else if (
-            row.values.includes(ADJUSTMENT_TYPES.MONETIZATION_DISABLED.VALUE)
-        ) {
-            row.font = { name: "Arial", size: 12, color: { argb: "FFFFFFFF" } };
-            row.fill = {
-                type: "pattern",
-                pattern: "solid",
-                fgColor: { argb: "FFDC3545" },
-            };
-        } else {
-            row.font = { name: "Arial", size: 12 };
-        }
-
-        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-            cell.font = cell.font ?? { name: "Arial", size: 12 };
-            cell.border = {
-                top: { style: "thin" },
-                left: { style: "thin" },
-                bottom: { style: "thin" },
-                right: { style: "thin" },
-            };
-
-            const key = worksheet.getColumn(colNumber).key?.toString();
-            if (key && columnNumFmtMap[key] && typeof cell.value === "number") {
-                cell.numFmt = columnNumFmtMap[key];
-            }
-            if (key && columnAlignMap[key]) {
-                cell.alignment = {
-                    vertical: "middle",
-                    horizontal: columnAlignMap[key],
-                };
-            }
-        });
-    });
-
-    // Tạo tệp Excel và cho phép tải xuống
-    workbook.xlsx.writeBuffer().then(function (buffer) {
-        const blob = new Blob([buffer], {
-            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = Date.now() + ".xlsx";
-        link.click(); // Trình duyệt sẽ tự động tải xuống tệp
-    });
-};
-
 // const setTableData = (data) => {
 //     if (data.length <= 0) return;
 //     const tableWrapper = $("#table-wrapper");
@@ -180,10 +58,63 @@ const getCellData = (row, cellIndex) => {
 // Quá số dòng này mà chưa thấy header thì file không đúng định dạng => dừng đọc sớm.
 const MAX_HEADER_SEARCH_ROWS = 50;
 
-// Chuỗi Papa trả về là chuỗi "cắt" từ chunk ~10MB đang đọc; lưu giữ nó sẽ giữ luôn cả chunk
+// Chuỗi Papa trả về là chuỗi "cắt" từ chunk đang đọc; lưu giữ nó sẽ giữ luôn cả chunk
 // trong bộ nhớ. Tạo bản sao độc lập cho các chuỗi được lưu lại sau khi đọc xong dòng.
 const detachString = (value) =>
     typeof value === "string" ? (" " + value).slice(1) : value;
+
+// Bọc ReadableStream (byte) của trình duyệt thành object kiểu Node stream mà Papa đọc được.
+// - Giải mã UTF-8 bằng TextDecoderStream nên ký tự nhiều byte không bị cắt đôi giữa các chunk.
+// - Papa xử lý xong mỗi đoạn ngay trong lúc emit "data", chỉ sau đó mới đọc đoạn tiếp theo,
+//   nên dữ liệu không bị dồn lại trong RAM (đọc được cả file nằm trong zip, xem js/zip.js).
+const toPapaStream = (byteStream) => {
+    const listeners = { data: [], end: [], error: [] };
+    const emit = (event, value) =>
+        listeners[event].slice().forEach((listener) => listener(value));
+    const reader = byteStream.pipeThrough(new TextDecoderStream()).getReader();
+    let started = false;
+    let cancelled = false;
+
+    const pump = async () => {
+        try {
+            for (;;) {
+                const { done, value } = await reader.read();
+                if (cancelled) return;
+                if (done) {
+                    emit("end");
+                    return;
+                }
+                emit("data", value);
+            }
+        } catch (err) {
+            if (!cancelled) emit("error", err);
+        }
+    };
+
+    return {
+        readable: true,
+        read() {},
+        pause() {},
+        resume() {},
+        on(event, listener) {
+            listeners[event]?.push(listener);
+            // Papa gắn đủ listener ngay trong Papa.parse, bắt đầu đọc sau đó
+            if (!started) {
+                started = true;
+                setTimeout(pump, 0);
+            }
+            return this;
+        },
+        removeListener(event, listener) {
+            listeners[event] = (listeners[event] || []).filter((l) => l !== listener);
+            return this;
+        },
+        cancel() {
+            cancelled = true;
+            reader.cancel().catch(() => {});
+        },
+    };
+};
 
 const getHeaderIndexes = (headerRow, headerKey) => {
     // name có thể là một tên cột hoặc danh sách tên thay thế (ưu tiên theo thứ tự)
@@ -215,6 +146,7 @@ const getHeaderIndexes = (headerRow, headerKey) => {
 // file báo cáo có thể nặng hàng GB, giữ toàn bộ dòng sẽ gây "out of memory".
 // Các dòng được gộp theo (kênh, loại điều chỉnh, thuế suất, tiền tệ) nên kết quả trả về
 // vẫn có dạng như từng dòng trước đây và các hàm process* cho ra cùng kết quả.
+// file: File, hoặc file nằm trong zip (openZipEntry) - chỉ cần có name và stream().
 const getCsvData = (file, headerKey, headerDetector) => {
     if (!file) {
         return Promise.resolve([]);
@@ -225,8 +157,9 @@ const getCsvData = (file, headerKey, headerDetector) => {
         const groups = new Map();
         let indexes = null;
         let rowNumber = 0;
+        const source = toPapaStream(file.stream());
 
-        Papa.parse(file, {
+        Papa.parse(source, {
             skipEmptyLines: true,
             dynamicTyping: true, // Auto-converts data types like number, boolean
             step: (results, parser) => {
@@ -238,6 +171,7 @@ const getCsvData = (file, headerKey, headerDetector) => {
                         indexes = getHeaderIndexes(row, headerKey);
                     } else if (rowNumber >= MAX_HEADER_SEARCH_ROWS) {
                         parser.abort();
+                        source.cancel();
                     }
                     return;
                 }

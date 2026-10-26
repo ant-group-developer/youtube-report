@@ -303,8 +303,16 @@ $("#search").on("input", function () {
 changePage(currentPage);
 
 // Export
-$("#export").on("click", function () {
-    exportExcel(filteredData);
+$("#export").on("click", async function () {
+    const exportBtn = $(this);
+    exportBtn.prop("disabled", true); // Tránh bấm nhiều lần khi đang xuất file lớn
+    try {
+        await exportExcel(filteredData);
+    } catch (error) {
+        console.error("Export failed:", error);
+        alert(`Export failed: ${error.message}`);
+    }
+    exportBtn.prop("disabled", false);
 });
 
 // Hàm đặt lại dữ liệu, tìm kiếm và phân trang
