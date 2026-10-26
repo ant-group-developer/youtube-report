@@ -113,6 +113,8 @@ const RULES = {
 
 const CSV_COLUMNS = {
     CHANNEL_ID: "Channel ID",
+    // File Red Music dạng "red_month_subscription_video_v1_1_*" không có "Channel ID"
+    VIDEO_CHANNEL_ID: "Video Channel ID",
     CHANNEL_DISPLAY_NAME: "Channel Display Name",
     PARTNER_REVENUE: "Partner Revenue",
     EARNINGS: "Earnings (USD)",

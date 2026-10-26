@@ -180,8 +180,20 @@ const getCellData = (row, cellIndex) => {
 // Quá số dòng này mà chưa thấy header thì file không đúng định dạng => dừng đọc sớm.
 const MAX_HEADER_SEARCH_ROWS = 50;
 
+// Chuỗi Papa trả về là chuỗi "cắt" từ chunk ~10MB đang đọc; lưu giữ nó sẽ giữ luôn cả chunk
+// trong bộ nhớ. Tạo bản sao độc lập cho các chuỗi được lưu lại sau khi đọc xong dòng.
+const detachString = (value) =>
+    typeof value === "string" ? (" " + value).slice(1) : value;
+
 const getHeaderIndexes = (headerRow, headerKey) => {
-    const indexOf = (name) => headerRow.findIndex((item) => item === name);
+    // name có thể là một tên cột hoặc danh sách tên thay thế (ưu tiên theo thứ tự)
+    const indexOf = (name) => {
+        for (const candidate of [].concat(name)) {
+            const index = headerRow.findIndex((item) => item === candidate);
+            if (index !== -1) return index;
+        }
+        return -1;
+    };
     return {
         channelId: indexOf(headerKey.id),
         channelName: indexOf(headerKey.name),
@@ -222,7 +234,7 @@ const getCsvData = (file, headerKey, headerDetector) => {
                 rowNumber++;
 
                 if (!indexes) {
-                    if (row.includes(headerDetector)) {
+                    if ([].concat(headerDetector).some((name) => row.includes(name))) {
                         indexes = getHeaderIndexes(row, headerKey);
                     } else if (rowNumber >= MAX_HEADER_SEARCH_ROWS) {
                         parser.abort();
@@ -244,9 +256,11 @@ const getCsvData = (file, headerKey, headerDetector) => {
                 if (!channel) {
                     channel = {
                         order: channels.size,
-                        name: getCellData(row, indexes.channelName) || uc,
+                        name: detachString(
+                            getCellData(row, indexes.channelName) || uc,
+                        ),
                     };
-                    channels.set(uc, channel);
+                    channels.set(detachString(uc), channel);
                 }
 
                 const key = `${uc}\u0000${channelAdjustmentType}\u0000${channelTaxWithholdingRate}\u0000${channelLocalCurrency}`;
@@ -255,16 +269,18 @@ const getCsvData = (file, headerKey, headerDetector) => {
                     group = {
                         channel,
                         lastRow: 0,
-                        channelId: uc,
+                        channelId: detachString(uc),
                         channelRev: 0,
                         channelDeductionAmount: 0,
-                        channelAdjustmentType,
+                        channelAdjustmentType: detachString(channelAdjustmentType),
                         channelUsSourcedRevenue: 0,
                         channelTaxWithheldAmount: 0,
-                        channelTaxWithholdingRate,
-                        channelLocalCurrency,
+                        channelTaxWithholdingRate: detachString(
+                            channelTaxWithholdingRate,
+                        ),
+                        channelLocalCurrency: detachString(channelLocalCurrency),
                     };
-                    groups.set(key, group);
+                    groups.set(detachString(key), group);
                 }
 
                 group.lastRow = rowNumber;

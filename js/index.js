@@ -521,14 +521,18 @@ const getAllCsvData = async (values) => {
         CSV_COLUMNS.CHANNEL_ID,
     );
 
+    const redMusicChannelIdColumns = [
+        CSV_COLUMNS.CHANNEL_ID,
+        CSV_COLUMNS.VIDEO_CHANNEL_ID,
+    ];
     const dataSubscriptionRevenueRedMusic = await getCsvData(
         values.subscriptionRevenueRedMusicFile,
         {
-            id: CSV_COLUMNS.CHANNEL_ID,
+            id: redMusicChannelIdColumns,
             name: CSV_COLUMNS.CHANNEL_DISPLAY_NAME,
             revenue: CSV_COLUMNS.PARTNER_REVENUE,
         },
-        CSV_COLUMNS.CHANNEL_ID,
+        redMusicChannelIdColumns,
     );
 
     const dataYoutubeShortsAds = await getCsvData(
