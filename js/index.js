@@ -148,7 +148,7 @@ $("#month-select").on("change", function () {
             rule: RULES.YOUTUBE_SHORTS_ADS,
         },
         {
-            label: "Shorts (Country Pool)",
+            label: "Shorts (Music Dynamic Pool)",
             file: filesObj.shortsPoolRevenueFile,
             rule: RULES.SHORTS_POOL_REVENUE,
         },
@@ -377,7 +377,7 @@ const getRevenueSummary = (values, allCsvData) => {
             amount: sumRevenue(allCsvData.dataYoutubeShortsSubscription),
         },
         {
-            label: "Shorts (Country Pool)",
+            label: "Shorts (Music Dynamic Pool)",
             file: values.shortsPoolRevenueFile,
             amount: sumRevenue(allCsvData.dataShortsPoolRevenue),
         },
@@ -619,7 +619,7 @@ const getAllCsvData = async (values) => {
               };
     });
 
-    // Shorts theo quốc gia không chia được theo kênh: gom thành một dòng riêng
+    // Shorts Music Dynamic Pool chỉ có số theo quốc gia, không chia được theo kênh: gom thành một dòng riêng
     const dataShortsPoolRevenue = shortsPoolByCountry.map((item) => ({
         ...item,
         channelId: NO_CHANNEL_ROWS.SHORTS_POOL.KEY,
@@ -828,7 +828,7 @@ const convertTableData = (allCsvData) => {
         tableData,
     );
 
-    // YouTube Shorts theo quốc gia (dòng riêng, không có kênh)
+    // YouTube Shorts Music Dynamic Pool (dòng riêng, không có kênh)
     processRevenueData(dataShortsPoolRevenue, TABLE_COLUMNS.REVENUE, tableData);
 
     // Shopping Affiliate, PfEdu và khoản thưởng (affiliate payment summary)

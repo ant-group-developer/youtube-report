@@ -73,7 +73,8 @@ const RULES = {
     },
 
     SHORTS_POOL_REVENUE: {
-        // Shorts theo quốc gia: "shorts_partner_revenue_month_shorts_summary_*", không có "Channel ID"
+        // Shorts Music Dynamic Pool (tên trong Payment summary), số theo quốc gia:
+        // "shorts_partner_revenue_month_shorts_summary_*", không có "Channel ID"
         requiredAny: [/(?:^|[_-])shorts[_-]?partner[_-]?revenue[_-]?month[_-]?shorts[_-]?summary/i],
         forbidden: [/(?:^|[_-])week(?:[_-]|$)/i, /(?:^|[_-])day(?:[_-]|$)/i],
     },
@@ -178,7 +179,7 @@ const AFFILIATE_ONLY_SOURCES = {
 const NO_CHANNEL_ROWS = {
     SHORTS_POOL: {
         KEY: "no-channel:shorts-pool",
-        NAME: "YouTube Shorts revenue (country pool, no channel breakdown)",
+        NAME: "YouTube Shorts revenue (Music Dynamic Pool, no channel breakdown)",
     },
     AUDIO_TIER: {
         KEY: "no-channel:audio-tier",

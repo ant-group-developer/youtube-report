@@ -90,7 +90,7 @@ const renderTable = (data, searchTerm = "") => {
                 className = "";
         }
 
-        // Dòng doanh thu không có kênh (Shorts theo quốc gia, Audio Tier chưa gắn kênh) không có link
+        // Dòng doanh thu không có kênh (Shorts Music Dynamic Pool, Audio Tier chưa gắn kênh) không có link
         const nameCell = link
             ? `<a href="${link}" target="_blank" rel="noopener noreferrer">${name}</a>`
             : `<span class="fst-italic">${name}</span>`;
