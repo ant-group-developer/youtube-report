@@ -22,6 +22,7 @@ A client-side web application for importing, aggregating, and analyzing YouTube 
 - **Revenue by Source**: Shows the total of each revenue source and the file it came from, to reconcile with the Payment summary in YouTube Studio.
 - **Amounts**: Shown with 2 decimal places in the table; the Excel export keeps full-precision values (displayed as `#,##0.00`), so totals and Excel `SUM` match the source reports.
 - **Search and Pagination**: Quickly find specific channels using the search bar (filters after you stop typing) and navigate through large datasets with built-in pagination.
+- **Hide Channels Without Revenue**: Hide channels whose Total Revenue is 0 in the table and the Excel export. With **Keep from files**, channels without revenue are still kept if they appear in the selected source files (e.g. the Ads Revenue report); the selection is kept across imports.
 - **Excel Export**: Export the aggregated report table (or the current search results) to an `.xlsx` file named after the report folder and month, with progress shown on the button.
 
 ## Configuration

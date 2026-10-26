@@ -175,6 +175,29 @@ const AFFILIATE_ONLY_SOURCES = {
     },
 };
 
+// Các nguồn dữ liệu của một lần import, theo thứ tự hiển thị trong bảng tổng theo nguồn.
+// dataKey: dữ liệu trong getAllCsvData; fileKey: file trong getImportFiles;
+// type: "revenue" (cộng Partner Revenue), "deduction" (khấu trừ / cộng lại của kênh), "tax" (chỉ thông tin thuế);
+// optional: chỉ liệt kê trong bảng tổng khi có doanh thu.
+// Vị trí trong danh sách là bit đánh dấu kênh có trong nguồn đó (lọc "giữ kênh của file nguồn").
+const DATA_SOURCES = [
+    { dataKey: "dataAdsRevenue", fileKey: "adsRevenueFile", label: "Ads Revenue", type: "revenue" },
+    { dataKey: "dataAdsAdjustmentsRevenue", fileKey: "adsAdjustmentsRevenueFile", label: "Ads Adjustments", type: "revenue" },
+    { dataKey: "dataSubscriptionRevenueRedMusic", fileKey: "subscriptionRevenueRedMusicFile", label: "Subscription Red Music", type: "revenue" },
+    { dataKey: "dataSubscriptionRevenueRed", fileKey: "subscriptionRevenueRedFile", label: "Subscription Red", type: "revenue" },
+    { dataKey: "dataSubscriptionAdjustmentsRevenue", fileKey: "subscriptionAdjustmentsRevenueFile", label: "Subscription Adjustments", type: "revenue" },
+    { dataKey: "dataAudioTierRevenue", fileKey: "audioTierRevenueFile", label: "Audio Tier", type: "revenue" },
+    { dataKey: "dataYoutubeShortsAds", fileKey: "youtubeShortsAdsFile", label: "Shorts Ads", type: "revenue" },
+    { dataKey: "dataYoutubeShortsSubscription", fileKey: "youtubeShortsSubscriptionFile", label: "Shorts Subscription", type: "revenue" },
+    { dataKey: "dataShortsPoolRevenue", fileKey: "shortsPoolRevenueFile", label: "Shorts (Music Dynamic Pool)", type: "revenue" },
+    { dataKey: "dataPaidFeatures", fileKey: "paidFeaturesFile", label: "Paid Features", type: "revenue" },
+    { dataKey: "dataShoppingAffiliateRevenue", fileKey: "affiliatePaymentSummaryFile", label: AFFILIATE_ONLY_SOURCES.SHOPPING_AFFILIATE.LABEL, type: "revenue", optional: true },
+    { dataKey: "dataPfEduRevenue", fileKey: "affiliatePaymentSummaryFile", label: AFFILIATE_ONLY_SOURCES.PFEDU.LABEL, type: "revenue", optional: true },
+    { dataKey: "dataOtherAffiliateRevenue", fileKey: "affiliatePaymentSummaryFile", label: AFFILIATE_ONLY_SOURCES.OTHER.LABEL, type: "revenue", optional: true },
+    { dataKey: "dataCustomAdjustments", fileKey: "customAdjustmentsFile", label: "Channel Adjustments", type: "deduction" },
+    { dataKey: "dataAffiliatePaymentSummary", fileKey: "affiliatePaymentSummaryFile", label: "Affiliate Summary (Tax)", type: "tax" },
+];
+
 // Doanh thu không gắn được vào kênh (report không có Channel ID) được gom thành dòng riêng trong bảng
 const NO_CHANNEL_ROWS = {
     SHORTS_POOL: {

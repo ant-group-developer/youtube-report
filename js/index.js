@@ -320,14 +320,12 @@ $("#month-select").on("change", function () {
     }
 });
 
-// Tổng doanh thu theo từng nguồn, để đối chiếu với Payment summary của YouTube.
-// Chỉ liệt kê nguồn có file; nguồn lấy từ affiliate summary chỉ liệt kê khi có doanh thu.
+// Tổng doanh thu theo từng nguồn (DATA_SOURCES), để đối chiếu với Payment summary của YouTube.
+// Chỉ liệt kê nguồn có file; nguồn optional (từ affiliate summary) chỉ liệt kê khi có doanh thu.
 const getRevenueSummary = (values, allCsvData) => {
-    const sumRevenue = (data) =>
-        data.reduce((sum, row) => sum + (row.channelRev || 0), 0);
-
-    const sumCustomAdjustments = (data) =>
+    const getAmount = (source, data) =>
         data.reduce((sum, row) => {
+            if (source.type === "revenue") return sum + (row.channelRev || 0);
             const amount = row.channelDeductionAmount || 0;
             return row.channelAdjustmentType ===
                 ADJUSTMENT_TYPES.MONETIZATION_DISABLED.VALUE
@@ -335,87 +333,29 @@ const getRevenueSummary = (values, allCsvData) => {
                 : sum + amount;
         }, 0);
 
-    const items = [
-        {
-            label: "Ads Revenue",
-            file: values.adsRevenueFile,
-            amount: sumRevenue(allCsvData.dataAdsRevenue),
-        },
-        {
-            label: "Ads Adjustments",
-            file: values.adsAdjustmentsRevenueFile,
-            amount: sumRevenue(allCsvData.dataAdsAdjustmentsRevenue),
-        },
-        {
-            label: "Subscription Red Music",
-            file: values.subscriptionRevenueRedMusicFile,
-            amount: sumRevenue(allCsvData.dataSubscriptionRevenueRedMusic),
-        },
-        {
-            label: "Subscription Red",
-            file: values.subscriptionRevenueRedFile,
-            amount: sumRevenue(allCsvData.dataSubscriptionRevenueRed),
-        },
-        {
-            label: "Subscription Adjustments",
-            file: values.subscriptionAdjustmentsRevenueFile,
-            amount: sumRevenue(allCsvData.dataSubscriptionAdjustmentsRevenue),
-        },
-        {
-            label: "Audio Tier",
-            file: values.audioTierRevenueFile,
-            amount: sumRevenue(allCsvData.dataAudioTierRevenue),
-        },
-        {
-            label: "Shorts Ads",
-            file: values.youtubeShortsAdsFile,
-            amount: sumRevenue(allCsvData.dataYoutubeShortsAds),
-        },
-        {
-            label: "Shorts Subscription",
-            file: values.youtubeShortsSubscriptionFile,
-            amount: sumRevenue(allCsvData.dataYoutubeShortsSubscription),
-        },
-        {
-            label: "Shorts (Music Dynamic Pool)",
-            file: values.shortsPoolRevenueFile,
-            amount: sumRevenue(allCsvData.dataShortsPoolRevenue),
-        },
-        {
-            label: "Paid Features",
-            file: values.paidFeaturesFile,
-            amount: sumRevenue(allCsvData.dataPaidFeatures),
-        },
-        {
-            label: AFFILIATE_ONLY_SOURCES.SHOPPING_AFFILIATE.LABEL,
-            file: values.affiliatePaymentSummaryFile,
-            amount: sumRevenue(allCsvData.dataShoppingAffiliateRevenue),
-            optional: true,
-        },
-        {
-            label: AFFILIATE_ONLY_SOURCES.PFEDU.LABEL,
-            file: values.affiliatePaymentSummaryFile,
-            amount: sumRevenue(allCsvData.dataPfEduRevenue),
-            optional: true,
-        },
-        {
-            label: AFFILIATE_ONLY_SOURCES.OTHER.LABEL,
-            file: values.affiliatePaymentSummaryFile,
-            amount: sumRevenue(allCsvData.dataOtherAffiliateRevenue),
-            optional: true,
-        },
-        {
-            label: "Channel Adjustments",
-            file: values.customAdjustmentsFile,
-            amount: sumCustomAdjustments(allCsvData.dataCustomAdjustments),
-        },
-    ].filter((item) => item.file && !(item.optional && item.amount === 0));
+    const items = DATA_SOURCES.filter((source) => source.type !== "tax")
+        .map((source) => ({
+            label: source.label,
+            file: values[source.fileKey],
+            amount: getAmount(source, allCsvData[source.dataKey]),
+            optional: source.optional,
+        }))
+        .filter((item) => item.file && !(item.optional && item.amount === 0));
 
     return {
         items,
         total: items.reduce((sum, item) => sum + item.amount, 0),
     };
 };
+
+// Các nguồn có dữ liệu trong lần import (để chọn "giữ kênh của file nguồn"): { bit, label, fileName }
+const getImportedSources = (values, allCsvData) =>
+    DATA_SOURCES.map((source, index) => ({
+        bit: 1 << index,
+        label: source.label,
+        fileName: values[source.fileKey]?.name,
+        rowCount: allCsvData[source.dataKey].length,
+    })).filter((source) => source.fileName && source.rowCount > 0);
 
 const logRevenueSummary = (revenueSummary) => {
     const format = (val) =>
@@ -701,6 +641,7 @@ const getNewCellData = (channelId, channelName) => {
         [TABLE_COLUMNS.DEDUCTION_AMOUNT]: 0,
         [TABLE_COLUMNS.TOTAL_REVENUE]: 0,
         [TABLE_COLUMNS.NOTE]: "",
+        sourceMask: 0, // các nguồn (bit theo DATA_SOURCES) có kênh này
     };
 };
 
@@ -894,6 +835,15 @@ const convertTableData = (allCsvData) => {
 
     // Affiliate Payment Summary
     processAffiliatePaymentData(dataAffiliatePaymentSummary, tableData);
+
+    // Đánh dấu kênh có trong nguồn nào (mỗi nguồn một bit, theo DATA_SOURCES)
+    DATA_SOURCES.forEach((source, index) => {
+        const bit = 1 << index;
+        allCsvData[source.dataKey].forEach((row) => {
+            const value = tableData.get(row.channelId);
+            if (value) value.sourceMask |= bit;
+        });
+    });
 
     const noChannelKeys = Object.values(NO_CHANNEL_ROWS).map((row) => row.KEY);
 
@@ -1101,6 +1051,7 @@ const onSubmitImport = async (e) => {
 
         resetData(tableData, {
             exportFileName: `${currentDirectoryHandle?.name ?? "youtube-report"}_${formatMonthKey(monthKey)}`,
+            sources: getImportedSources(values, allCsvData),
         });
         renderRevenueSummary(revenueSummary, monthKey, Date.now() - startedAt);
 

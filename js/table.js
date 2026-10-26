@@ -7,6 +7,9 @@ let currentPage = 1;
 let exportFileName = null; // tên file Excel theo thư mục và tháng của lần import gần nhất
 let searchIndex = null; // UC + tên (chữ thường) của từng dòng, tạo khi tìm kiếm lần đầu
 let searchTimer = null;
+// Bit các file nguồn được chọn (theo DATA_SOURCES): kênh không có doanh thu nhưng có trong các file
+// này vẫn được giữ khi bật "Hide channels without revenue". Giữ nguyên qua các lần import.
+let keepSourceMask = 0;
 // Footer chỉ tính lại khi dữ liệu đã lọc thay đổi, không phải mỗi lần đổi trang
 let footerData = null;
 
@@ -348,7 +351,9 @@ const applySearch = () => {
         }
         filteredData = dataTableGlobal.filter(
             (item, index) =>
-                (!hideZeroRevenue || hasRevenue(item)) &&
+                (!hideZeroRevenue ||
+                    hasRevenue(item) ||
+                    (item.sourceMask & keepSourceMask) !== 0) &&
                 (!searchTerm || searchIndex[index].includes(searchTerm)),
         );
     }
@@ -364,10 +369,50 @@ $("#search").on("input", function () {
     searchTimer = setTimeout(applySearch, 250);
 });
 
-$("#hide-zero-revenue").on("change", applySearch);
+// Menu "Keep from files": các nguồn có dữ liệu trong lần import, đánh dấu những nguồn đang được chọn
+const renderKeepSources = (sources) => {
+    $("#keep-sources-menu").html(
+        sources.length
+            ? sources
+                  .map(
+                      (source) => `<div class="form-check">
+                    <input class="form-check-input keep-source" type="checkbox" value="${source.bit}"
+                        id="keep-source-${source.bit}" ${keepSourceMask & source.bit ? "checked" : ""}>
+                    <label class="form-check-label" for="keep-source-${source.bit}">
+                        ${escapeHtml(source.label)}
+                        <span class="d-block small text-secondary text-break">${escapeHtml(source.fileName)}</span>
+                    </label>
+                </div>`,
+                  )
+                  .join("")
+            : `<span class="small text-secondary">Import data first.</span>`,
+    );
+    updateKeepSourcesButton();
+};
+
+// Nút chỉ dùng được khi bật ẩn kênh không có doanh thu; hiện số nguồn đang được chọn
+const updateKeepSourcesButton = () => {
+    const selected = $("#keep-sources-menu .keep-source:checked").length;
+    $("#keep-sources-button")
+        .prop("disabled", !$("#hide-zero-revenue").is(":checked"))
+        .text(selected ? `Keep from files (${selected})` : "Keep from files");
+};
+
+$("#keep-sources-menu").on("change", ".keep-source", function () {
+    const bit = Number(this.value);
+    keepSourceMask = this.checked ? keepSourceMask | bit : keepSourceMask & ~bit;
+    updateKeepSourcesButton();
+    applySearch();
+});
+
+$("#hide-zero-revenue").on("change", () => {
+    updateKeepSourcesButton();
+    applySearch();
+});
 
 // Initial render
 changePage(currentPage);
+renderKeepSources([]);
 
 // Export
 $("#export").on("click", async function () {
@@ -400,10 +445,15 @@ $("#export").on("click", async function () {
 
 // Hàm đặt lại dữ liệu, tìm kiếm và phân trang
 // options.exportFileName: tên file Excel (không gồm đuôi) cho dữ liệu này
-const resetData = (initialData, { exportFileName: fileName = null } = {}) => {
+// options.sources: các file nguồn của lần import (menu "Keep from files")
+const resetData = (
+    initialData,
+    { exportFileName: fileName = null, sources = [] } = {},
+) => {
     // Đặt lại dataTableGlobal về dữ liệu ban đầu
     dataTableGlobal = initialData;
     exportFileName = fileName;
+    renderKeepSources(sources);
     searchIndex = null;
 
     // Đặt lại từ khóa tìm kiếm (clear input)
