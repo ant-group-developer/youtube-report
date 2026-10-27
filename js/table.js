@@ -75,17 +75,12 @@ const renderTable = (data, searchTerm = "") => {
             item[TABLE_COLUMNS.TOTAL_REVENUE]);
         const note = item[TABLE_COLUMNS.NOTE] || "";
 
+        // Note có thể gồm nhiều loại điều chỉnh (kèm tiền tệ): MONETIZATION DISABLED được ưu tiên tô màu
         let className = "";
-
-        switch (note) {
-            case ADJUSTMENT_TYPES.MONETIZATION_DISABLED.VALUE:
-                className = ADJUSTMENT_TYPES.MONETIZATION_DISABLED.CLASS_NAME;
-                break;
-            case ADJUSTMENT_TYPES.CREDIT_APPEAL.VALUE:
-                className = ADJUSTMENT_TYPES.CREDIT_APPEAL.CLASS_NAME;
-                break;
-            default:
-                className = "";
+        if (note.includes(ADJUSTMENT_TYPES.MONETIZATION_DISABLED.VALUE)) {
+            className = ADJUSTMENT_TYPES.MONETIZATION_DISABLED.CLASS_NAME;
+        } else if (note.includes(ADJUSTMENT_TYPES.CREDIT_APPEAL.VALUE)) {
+            className = ADJUSTMENT_TYPES.CREDIT_APPEAL.CLASS_NAME;
         }
 
         // Dòng doanh thu không có kênh (Shorts Music Dynamic Pool, Audio Tier chưa gắn kênh) không có link

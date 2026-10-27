@@ -175,6 +175,13 @@ const AFFILIATE_ONLY_SOURCES = {
     },
 };
 
+// Paid Features (Transactions, Super Thanks) trong affiliate payment summary: chỉ dùng khi thiếu
+// file Paid Features của tháng (vd. Nagato 2025-07), để không cộng hai lần.
+const AFFILIATE_PAID_FEATURES_SOURCE = {
+    LABEL: "Paid Features (affiliate summary)",
+    test: (source) => /transactions|super thanks/i.test(source),
+};
+
 // Các nguồn dữ liệu của một lần import, theo thứ tự hiển thị trong bảng tổng theo nguồn.
 // dataKey: dữ liệu trong getAllCsvData; fileKey: file trong getImportFiles;
 // type: "revenue" (cộng Partner Revenue), "deduction" (khấu trừ / cộng lại của kênh), "tax" (chỉ thông tin thuế);
@@ -191,6 +198,7 @@ const DATA_SOURCES = [
     { dataKey: "dataYoutubeShortsSubscription", fileKey: "youtubeShortsSubscriptionFile", label: "Shorts Subscription", type: "revenue" },
     { dataKey: "dataShortsPoolRevenue", fileKey: "shortsPoolRevenueFile", label: "Shorts (Music Dynamic Pool)", type: "revenue" },
     { dataKey: "dataPaidFeatures", fileKey: "paidFeaturesFile", label: "Paid Features", type: "revenue" },
+    { dataKey: "dataAffiliatePaidFeatures", fileKey: "affiliatePaymentSummaryFile", label: AFFILIATE_PAID_FEATURES_SOURCE.LABEL, type: "revenue", optional: true },
     { dataKey: "dataShoppingAffiliateRevenue", fileKey: "affiliatePaymentSummaryFile", label: AFFILIATE_ONLY_SOURCES.SHOPPING_AFFILIATE.LABEL, type: "revenue", optional: true },
     { dataKey: "dataPfEduRevenue", fileKey: "affiliatePaymentSummaryFile", label: AFFILIATE_ONLY_SOURCES.PFEDU.LABEL, type: "revenue", optional: true },
     { dataKey: "dataOtherAffiliateRevenue", fileKey: "affiliatePaymentSummaryFile", label: AFFILIATE_ONLY_SOURCES.OTHER.LABEL, type: "revenue", optional: true },
@@ -209,6 +217,9 @@ const NO_CHANNEL_ROWS = {
         NAME: "Audio Tier revenue (video not matched to a channel)",
     },
 };
+
+// Ngăn cách các loại điều chỉnh trong cột Note khi một kênh có nhiều loại
+const NOTE_SEPARATOR = ", ";
 
 const MATH_OPERATIONS = {
     PLUS: "Plus",

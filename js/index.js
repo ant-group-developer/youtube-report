@@ -591,6 +591,14 @@ const getAllCsvData = async (values, { onProgress, signal } = {}) => {
         values.affiliatePaymentSummaryFile,
         AFFILIATE_ONLY_SOURCES.OTHER,
     );
+    // Thiếu file Paid Features: lấy Transactions / Super Thanks của từng kênh từ affiliate payment summary
+    const dataAffiliatePaidFeatures = values.paidFeaturesFile
+        ? []
+        : await getAffiliateOnlyRevenue(
+              readCsv,
+              values.affiliatePaymentSummaryFile,
+              AFFILIATE_PAID_FEATURES_SOURCE,
+          );
 
     // Gắn doanh thu Audio Tier vào kênh của video; video không tìm thấy kênh gom vào một dòng riêng
     const dataAudioTierRevenue = audioTierByVideo.map((item) => {
@@ -615,6 +623,7 @@ const getAllCsvData = async (values, { onProgress, signal } = {}) => {
         dataAdsAdjustmentsRevenue,
         dataAdsRevenue,
         dataPaidFeatures,
+        dataAffiliatePaidFeatures,
         dataSubscriptionRevenueRed,
         dataSubscriptionRevenueRedMusic,
         dataSubscriptionAdjustmentsRevenue,
@@ -663,8 +672,13 @@ const processRevenueData = (data, revenueColumn, tableData) => {
 
 const processDeductionData = (data, tableData) => {
     data.forEach((item) => {
-        const { channelId, channelName, channelAdjustmentType, channelDeductionAmount } =
-            item;
+        const {
+            channelId,
+            channelName,
+            channelAdjustmentType,
+            channelDeductionAmount,
+            channelLocalCurrency,
+        } = item;
         let value = tableData.get(channelId);
         let deductionAmount = channelDeductionAmount;
 
@@ -682,7 +696,17 @@ const processDeductionData = (data, tableData) => {
         value[TABLE_COLUMNS.TOTAL_REVENUE] += deductionAmount;
         // }
 
-        value[TABLE_COLUMNS.NOTE] = channelAdjustmentType;
+        // Kênh có nhiều loại điều chỉnh (vd. MONETIZATION DISABLED và CREDIT - APPEAL) thì ghi đủ,
+        // không ghi đè; số tiền không phải USD vẫn được cộng / trừ nguyên giá trị nên ghi kèm tiền tệ
+        const note =
+            channelLocalCurrency && channelLocalCurrency !== "USD"
+                ? `${channelAdjustmentType} (${channelLocalCurrency})`
+                : channelAdjustmentType;
+        const notes = value[TABLE_COLUMNS.NOTE]
+            ? value[TABLE_COLUMNS.NOTE].split(NOTE_SEPARATOR)
+            : [];
+        if (!notes.includes(note)) notes.push(note);
+        value[TABLE_COLUMNS.NOTE] = notes.join(NOTE_SEPARATOR);
         value[TABLE_COLUMNS.DEDUCTION_AMOUNT] += deductionAmount;
 
         tableData.set(channelId, value);
@@ -719,6 +743,7 @@ const convertTableData = (allCsvData) => {
         dataAdsAdjustmentsRevenue,
         dataAdsRevenue,
         dataPaidFeatures,
+        dataAffiliatePaidFeatures,
         dataSubscriptionRevenueRed,
         dataSubscriptionRevenueRedMusic,
         dataSubscriptionAdjustmentsRevenue,
@@ -757,7 +782,7 @@ const convertTableData = (allCsvData) => {
         const alertHtml = `
             <div class="alert alert-warning alert-dismissible fade show mb-0" role="alert">
                 <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                <strong>Currency Mismatch Detected:</strong> The following processing files contain a Local Currency different from USD. Resulting amounts might be inaccurate:
+                <strong>Currency Mismatch Detected:</strong> The following processing files contain a Local Currency different from USD. Their amounts are added / deducted as-is (not converted to USD), so totals might be inaccurate:
                 <ul class="mt-2 mb-0">${fileAlerts}</ul>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
@@ -777,8 +802,9 @@ const convertTableData = (allCsvData) => {
     // Ads Revenue
     processRevenueData(dataAdsRevenue, TABLE_COLUMNS.REVENUE, tableData);
 
-    // Paid Features
+    // Paid Features (hoặc phần Paid Features trong affiliate summary khi thiếu file)
     processRevenueData(dataPaidFeatures, TABLE_COLUMNS.REVENUE, tableData);
+    processRevenueData(dataAffiliatePaidFeatures, TABLE_COLUMNS.REVENUE, tableData);
 
     // Subscription Revenue Red
     processRevenueData(
