@@ -243,15 +243,15 @@ const renderFooter = (data) => {
     });
 
     const footerContent = `
-        <td class="bg-dark-subtle">Total: ${data.length} channel(s)</td>
-        <td class="bg-dark-subtle"></td>
-        <td class="bg-dark-subtle">${formatAmount(totalUsRevenue)}</td>
-        <td class="bg-dark-subtle"></td>
-        <td class="bg-dark-subtle">${formatAmount(totalTaxWithheldAmount)}</td>
-        <td class="bg-dark-subtle">${formatAmount(totalRevenue)}</td>
-        <td class="bg-dark-subtle">${formatAmount(totalDeductionAmount)}</td>
-        <td class="bg-dark-subtle">${formatAmount(totalFinalRevenue)}</td>
-        <td class="bg-dark-subtle"></td>
+        <td>Total: ${data.length} channel(s)</td>
+        <td></td>
+        <td>${formatAmount(totalUsRevenue)}</td>
+        <td></td>
+        <td>${formatAmount(totalTaxWithheldAmount)}</td>
+        <td>${formatAmount(totalRevenue)}</td>
+        <td>${formatAmount(totalDeductionAmount)}</td>
+        <td>${formatAmount(totalFinalRevenue)}</td>
+        <td></td>
         `;
     footer.html(footerContent);
 };
@@ -265,25 +265,26 @@ const renderRevenueSummary = (revenueSummary, monthKey, elapsedMs) => {
         .map(
             (item) => `<tr>
                 <td>${escapeHtml(item.label)}</td>
-                <td class="text-secondary text-break">${escapeHtml(item.file.name)}</td>
+                <td class="text-secondary text-break small">${escapeHtml(item.file.name)}</td>
                 <td class="text-end text-nowrap">${formatAmount(item.amount)}</td>
             </tr>`,
         )
         .join("");
 
     container.html(`
-        <details class="border rounded-2 px-3 py-2" open>
-            <summary class="fw-medium">
-                Revenue by source ${escapeHtml(formatMonthKey(monthKey) || "")}:
-                ${formatAmount(revenueSummary.total)} USD
-                ${elapsedMs ? `<span class="fw-normal text-secondary small ms-2">imported in ${formatDuration(elapsedMs)}</span>` : ""}
+        <details class="card-panel px-3 py-2" open>
+            <summary class="d-flex flex-wrap align-items-baseline gap-2">
+                <i class="bi bi-chevron-down small text-secondary"></i>
+                <span class="fw-semibold">Revenue by source ${escapeHtml(formatMonthKey(monthKey) || "")}</span>
+                <span class="summary-total ms-1">${formatAmount(revenueSummary.total)} USD</span>
+                ${elapsedMs ? `<span class="text-secondary small ms-auto"><i class="bi bi-clock me-1"></i>imported in ${formatDuration(elapsedMs)}</span>` : ""}
             </summary>
-            <table class="table table-sm mb-0 mt-2">
+            <table class="table table-sm table-hover mb-1 mt-2">
                 <thead>
                     <tr>
-                        <th>Source</th>
-                        <th>File</th>
-                        <th class="text-end">Partner Revenue (USD)</th>
+                        <th class="text-secondary fw-semibold small">Source</th>
+                        <th class="text-secondary fw-semibold small">File</th>
+                        <th class="text-secondary fw-semibold small text-end">Partner Revenue (USD)</th>
                     </tr>
                 </thead>
                 <tbody>${rows}</tbody>

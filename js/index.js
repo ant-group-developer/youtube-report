@@ -215,7 +215,7 @@ $("#month-select").on("change", function () {
                     String(r).replace(/</g, "&lt;").replace(/>/g, "&gt;"),
                 )
                 .join(", ");
-            ruleHtml = `<details class="mt-2" style="font-size: 0.75rem; line-height: 1.2;">
+            ruleHtml = `<details class="mt-2">
                 <summary class="text-secondary opacity-75 fw-medium user-select-none text-decoration-underline" style="cursor: pointer;">View matching rules</summary>
                 <div class="mt-1 ms-2 p-2 bg-light border rounded">
                     <div class="text-muted"><strong class="text-secondary">Match:</strong> ${req}</div>
@@ -245,7 +245,7 @@ $("#month-select").on("change", function () {
         $("#unused-files-section").removeClass("d-none");
         $("#unused-files-count").text(unusedFiles.length);
         unusedFiles.forEach(f => {
-            const li = $(`<li class="list-group-item list-group-item-danger py-1 d-flex justify-content-between align-items-center" style="font-size: 0.85em;">
+            const li = $(`<li class="list-group-item list-group-item-danger py-1 d-flex justify-content-between align-items-center">
                 <span>${escapeHtml(f.name)}</span>
                 <button type="button" class="btn btn-danger btn-sm py-0 px-2 delete-single-file-btn" data-filename="${escapeHtml(f.name)}" title="Delete file">
                     <i class="bi bi-trash"></i> Delete

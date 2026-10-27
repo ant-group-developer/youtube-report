@@ -4,11 +4,11 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>YouTube Report</title>
+    <title>YouTube Revenue Report</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,500;0,700;1,400&family=Roboto+Mono:wght@400;500&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <link rel="stylesheet" href="./libs/bootstrap/5.3.7/css/bootstrap.min.css">
@@ -16,57 +16,63 @@
     <link rel="icon" href="./assets/logo.png" type="image/x-icon">
 </head>
 
-<body class="mx-auto px-5 pb-3 pt-0">
-    <div class="">
+<body>
+    <!-- Thanh tiêu đề cố định: logo + thao tác chính -->
+    <header id="app-header" class="app-header">
+        <div class="app-container d-flex align-items-center justify-content-between gap-3">
+            <div class="d-flex align-items-center gap-3 min-w-0">
+                <img src="./assets/logo.png" class="app-logo" alt="Logo">
+                <h1 class="app-title text-truncate">YouTube Revenue Report</h1>
+            </div>
+            <div class="d-flex gap-2 flex-shrink-0">
+                <button type="button" id="export" class="btn btn-success">
+                    <i class="bi bi-filetype-xlsx me-1"></i>
+                    Export Excel
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-toggle="modal"
+                    data-bs-target="#form-modal-import">
+                    <i class="bi bi-database-up me-1"></i>
+                    Import Data
+                </button>
+            </div>
+        </div>
+    </header>
 
-        <div id="table-wrapper" class="">
-            <div class="py-2 bg-white d-flex justify-content-between align-items-center gap-3">
-                <div class="d-flex gap-2 align-items-center flex-grow-1">
-                    <img src="./assets/logo.png" width="60px" height="100%">
-                    <div class="input-group flex-nowrap w-100 ms-3" style="height: 33px; max-width: 400px;">
-                        <span class="input-group-text" id="addon-wrapping">
-                            <i class="bi bi-search"></i>
-                        </span>
-                        <input id="search" class="form-control" type="text" placeholder="Search...">
-                    </div>
-                    <!-- Ẩn kênh có Total Revenue = 0 (áp dụng cho bảng và file Excel) -->
-                    <div class="form-check text-nowrap ms-2 mb-0">
-                        <input id="hide-zero-revenue" class="form-check-input" type="checkbox">
-                        <label class="form-check-label" for="hide-zero-revenue">Hide channels without revenue</label>
-                    </div>
-                    <!-- Vẫn giữ kênh không có doanh thu nếu kênh có trong các file nguồn được chọn -->
-                    <div class="dropdown">
-                        <button id="keep-sources-button" type="button"
-                            class="btn btn-sm btn-outline-secondary dropdown-toggle text-nowrap"
-                            data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" disabled
-                            title="Keep channels without revenue if they appear in the selected source files">
-                            Keep from files
-                        </button>
-                        <!-- z-index cao hơn tiêu đề bảng (sticky-top: 1020) để menu không bị che -->
-                        <div id="keep-sources-menu" class="dropdown-menu p-2" style="min-width: 360px; z-index: 1030;"></div>
-                    </div>
-                </div>
-                <div class="d-flex gap-2">
-                    <button type="button" id="export" class="btn btn-primary">
-                        <i class="bi bi-filetype-xlsx"></i>
-                        Export Excel
-                    </button>
-                    <button type="button" class="btn btn-secondary" data-bs-toggle="modal"
-                        data-bs-target="#form-modal-import">
-                        <i class="bi bi-database-up"></i>
-                        Import Data
-                    </button>
-                </div>
+    <main class="app-container py-3">
+
+        <div id="table-wrapper" class="toolbar card-panel mb-3">
+            <div class="input-group search-box">
+                <span class="input-group-text" id="addon-wrapping">
+                    <i class="bi bi-search"></i>
+                </span>
+                <input id="search" class="form-control" type="text" placeholder="Search channel ID or name...">
+            </div>
+            <div class="toolbar-divider d-none d-md-block"></div>
+            <!-- Ẩn kênh có Total Revenue = 0 (áp dụng cho bảng và file Excel) -->
+            <div class="form-check form-switch text-nowrap mb-0">
+                <input id="hide-zero-revenue" class="form-check-input" type="checkbox" role="switch">
+                <label class="form-check-label" for="hide-zero-revenue">Hide channels without revenue</label>
+            </div>
+            <!-- Vẫn giữ kênh không có doanh thu nếu kênh có trong các file nguồn được chọn -->
+            <div class="dropdown">
+                <button id="keep-sources-button" type="button"
+                    class="btn btn-sm btn-outline-secondary dropdown-toggle text-nowrap"
+                    data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" disabled
+                    title="Keep channels without revenue if they appear in the selected source files">
+                    Keep from files
+                </button>
+                <!-- z-index cao hơn tiêu đề bảng và thanh tiêu đề để menu không bị che -->
+                <div id="keep-sources-menu" class="dropdown-menu p-2 shadow" style="min-width: 360px; z-index: 1040;"></div>
             </div>
         </div>
 
-        <div id="alert-container" class="mb-2"></div>
+        <div id="alert-container" class="mb-3"></div>
 
-        <div id="revenue-summary" class="mb-2 d-none"></div>
+        <div id="revenue-summary" class="mb-3 d-none"></div>
 
-        <div class="rounded-2 border border-top-0 w-100">
-            <table id="table" class="w-100 table table-striped">
-                <thead class="sticky-top bg-white">
+        <div class="card-panel table-panel">
+            <table id="table" class="w-100 table table-hover mb-0">
+                <thead class="sticky-top">
                     <tr>
                         <th data-field="UC" data-width="300" style="width: 15%;" data-width-unit="%">
                             Channel ID
@@ -101,43 +107,44 @@
 
                 </tbody>
 
-                <tfoot class="fw-semibold">
+                <tfoot>
                     <tr id="table-footer">
-                        <td class="bg-dark-subtle">Total: 0 channel(s)</td>
-                        <td class="bg-dark-subtle"></td>
-                        <td class="bg-dark-subtle" data-field="US Revenue">0</td>
-                        <td class="bg-dark-subtle"></td>
-                        <td class="bg-dark-subtle" data-field="Tax Withheld Amount">0</td>
-                        <td class="bg-dark-subtle" data-field="Revenue">0</td>
-                        <td class="bg-dark-subtle" data-field="Deduction Amount">0</td>
-                        <td class="bg-dark-subtle" data-field="Total Revenue">0</td>
-                        <td class="bg-dark-subtle" data-field="Note"></td>
+                        <td>Total: 0 channel(s)</td>
+                        <td></td>
+                        <td data-field="US Revenue">0</td>
+                        <td></td>
+                        <td data-field="Tax Withheld Amount">0</td>
+                        <td data-field="Revenue">0</td>
+                        <td data-field="Deduction Amount">0</td>
+                        <td data-field="Total Revenue">0</td>
+                        <td data-field="Note"></td>
                     </tr>
                 </tfoot>
             </table>
 
-            <div id="no-data-message" class="alert text-center alert-dismissible">
-                No data available.
+            <div id="no-data-message" class="empty-state">
+                <i class="bi bi-inbox"></i>
+                <div class="fw-semibold">No data available</div>
+                <div class="small text-secondary">Click <span class="fw-medium">Import Data</span> and select a report folder to get started.</div>
             </div>
 
+            <nav class="table-panel-footer">
+                <div id="row-info" class="text-secondary small">
+
+                </div>
+
+                <ul id="pagination" class="pagination pagination-sm mb-0">
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" id="previous-page">Previous</a>
+                    </li>
+                    <!-- Pagination links will be inserted here -->
+                    <li class="page-item">
+                        <a class="page-link" href="#" id="next-page">Next</a>
+                    </li>
+                </ul>
+            </nav>
         </div>
-
-        <nav class="mt-2 d-flex justify-content-between align-content-center">
-            <div id="row-info" class="">
-
-            </div>
-
-            <ul id="pagination" class="pagination">
-                <li class="page-item disabled">
-                    <a class="page-link" href="#" id="previous-page">Previous</a>
-                </li>
-                <!-- Pagination links will be inserted here -->
-                <li class="page-item">
-                    <a class="page-link" href="#" id="next-page">Next</a>
-                </li>
-            </ul>
-        </nav>
-    </div>
+    </main>
 
     <!-- Modal Import -->
     <div class="modal fade" id="form-modal-import" tabindex="-1" aria-labelledby="modal-label" aria-hidden="true">
