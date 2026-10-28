@@ -678,6 +678,7 @@ const processDeductionData = (data, tableData) => {
             channelAdjustmentType,
             channelDeductionAmount,
             channelLocalCurrency,
+            channelExchangeRate,
         } = item;
         let value = tableData.get(channelId);
         let deductionAmount = channelDeductionAmount;
@@ -697,11 +698,13 @@ const processDeductionData = (data, tableData) => {
         // }
 
         // Kênh có nhiều loại điều chỉnh (vd. MONETIZATION DISABLED và CREDIT - APPEAL) thì ghi đủ,
-        // không ghi đè; số tiền không phải USD vẫn được cộng / trừ nguyên giá trị nên ghi kèm tiền tệ
-        const note =
-            channelLocalCurrency && channelLocalCurrency !== "USD"
-                ? `${channelAdjustmentType} (${channelLocalCurrency})`
-                : channelAdjustmentType;
+        // không ghi đè; số tiền không phải USD ghi kèm tiền tệ và tỉ giá đã quy đổi (nếu có)
+        let note = channelAdjustmentType;
+        if (channelLocalCurrency && channelLocalCurrency !== "USD") {
+            note = channelExchangeRate
+                ? `${channelAdjustmentType} (${channelLocalCurrency}, rate ${channelExchangeRate})`
+                : `${channelAdjustmentType} (${channelLocalCurrency})`;
+        }
         const notes = value[TABLE_COLUMNS.NOTE]
             ? value[TABLE_COLUMNS.NOTE].split(NOTE_SEPARATOR)
             : [];
@@ -757,38 +760,6 @@ const convertTableData = (allCsvData) => {
         dataPfEduRevenue,
         dataOtherAffiliateRevenue,
     } = allCsvData;
-
-    // Check for Local Currency mismatches across all files
-    const nonUsdFiles = new Map(); // using map to avoid duplicates and store currency
-    Object.values(allCsvData).forEach((dataset) => {
-        if (!dataset) return;
-        dataset.forEach((row) => {
-            if (
-                row.channelLocalCurrency &&
-                row.channelLocalCurrency !== "USD"
-            ) {
-                nonUsdFiles.set(row.fileName, row.channelLocalCurrency);
-            }
-        });
-    });
-
-    if (nonUsdFiles.size > 0) {
-        const fileAlerts = Array.from(nonUsdFiles.entries())
-            .map(([fName, currency]) => {
-                return `<li><strong>${escapeHtml(fName)}</strong> (Currency: ${escapeHtml(currency)})</li>`;
-            })
-            .join("");
-
-        const alertHtml = `
-            <div class="alert alert-warning alert-dismissible fade show mb-0" role="alert">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                <strong>Currency Mismatch Detected:</strong> The following processing files contain a Local Currency different from USD. Their amounts are added / deducted as-is (not converted to USD), so totals might be inaccurate:
-                <ul class="mt-2 mb-0">${fileAlerts}</ul>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        `;
-        $("#alert-container").append(alertHtml);
-    }
 
     const tableData = new Map();
 
@@ -896,6 +867,136 @@ const convertTableData = (allCsvData) => {
             b[TABLE_COLUMNS.TOTAL_REVENUE] - a[TABLE_COLUMNS.TOTAL_REVENUE],
     );
 };
+
+// Dữ liệu của lần import gần nhất (để tính lại bảng khi đổi tỉ giá mà không phải đọc lại file)
+let lastImport = null;
+// Tỉ giá quy đổi sang USD theo Local Currency do người dùng nhập (vd. { GBP: 1.27 }), đặt lại mỗi lần import
+let exchangeRates = {};
+
+// File có Local Currency khác USD: tên file -> tiền tệ
+const getNonUsdFiles = (allCsvData) => {
+    const nonUsdFiles = new Map();
+    Object.values(allCsvData).forEach((dataset) => {
+        dataset.forEach((row) => {
+            if (row.channelLocalCurrency && row.channelLocalCurrency !== "USD") {
+                nonUsdFiles.set(row.fileName, row.channelLocalCurrency);
+            }
+        });
+    });
+    return nonUsdFiles;
+};
+
+// Nhân các số tiền của dòng không phải USD với tỉ giá đã nhập; dòng chưa có tỉ giá giữ nguyên.
+// Chỉ tạo mảng mới cho nguồn có dòng cần quy đổi.
+const applyExchangeRates = (allCsvData, rates) => {
+    const getRate = (row) =>
+        row.channelLocalCurrency && row.channelLocalCurrency !== "USD"
+            ? rates[row.channelLocalCurrency]
+            : undefined;
+
+    return Object.fromEntries(
+        Object.entries(allCsvData).map(([key, data]) => [
+            key,
+            data.some(getRate)
+                ? data.map((row) => {
+                      const rate = getRate(row);
+                      return rate
+                          ? {
+                                ...row,
+                                channelRev: row.channelRev * rate,
+                                channelDeductionAmount: row.channelDeductionAmount * rate,
+                                channelUsSourcedRevenue: row.channelUsSourcedRevenue * rate,
+                                channelTaxWithheldAmount: row.channelTaxWithheldAmount * rate,
+                                channelExchangeRate: rate,
+                            }
+                          : row;
+                  })
+                : data,
+        ]),
+    );
+};
+
+// Cảnh báo file không phải USD, kèm ô nhập tỉ giá (1 <tiền tệ> = ? USD) cho từng tiền tệ
+const renderCurrencyAlert = (nonUsdFiles) => {
+    if (nonUsdFiles.size === 0) return;
+
+    const fileAlerts = Array.from(nonUsdFiles.entries())
+        .map(
+            ([fName, currency]) =>
+                `<li><strong>${escapeHtml(fName)}</strong> (Currency: ${escapeHtml(currency)})</li>`,
+        )
+        .join("");
+
+    const rateInputs = [...new Set(nonUsdFiles.values())]
+        .map(
+            (currency) => `<div class="input-group input-group-sm w-auto">
+                <span class="input-group-text">1 ${escapeHtml(currency)} =</span>
+                <input type="number" class="form-control exchange-rate" style="width: 8rem"
+                    min="0" step="any" placeholder="Exchange rate"
+                    data-currency="${escapeHtml(currency)}" aria-label="${escapeHtml(currency)} to USD rate">
+                <span class="input-group-text">USD</span>
+            </div>`,
+        )
+        .join("");
+
+    $("#alert-container").append(`
+        <div class="alert alert-warning alert-dismissible fade show mb-0" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <strong>Currency Mismatch Detected:</strong> The following processing files contain a Local Currency different from USD. Enter the exchange rate to convert their amounts to USD; without a rate they are added / deducted as-is, so totals might be inaccurate:
+            <ul class="mt-2 mb-2">${fileAlerts}</ul>
+            <form id="exchange-rate-form" class="d-flex flex-wrap align-items-center gap-2">
+                ${rateInputs}
+                <button type="submit" class="btn btn-sm btn-primary">Apply</button>
+                <span id="exchange-rate-status" class="small"></span>
+            </form>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    `);
+};
+
+// Dựng bảng và tổng theo nguồn từ lần import gần nhất với tỉ giá hiện tại
+const buildReport = () => {
+    const { values, allCsvData, monthKey, exportFileName, elapsedMs } = lastImport;
+    const convertedData = applyExchangeRates(allCsvData, exchangeRates);
+
+    const revenueSummary = getRevenueSummary(values, convertedData);
+    logRevenueSummary(revenueSummary);
+
+    resetData(convertTableData(convertedData), {
+        exportFileName,
+        sources: getImportedSources(values, convertedData),
+    });
+    renderRevenueSummary(revenueSummary, monthKey, elapsedMs);
+};
+
+$("#alert-container").on("submit", "#exchange-rate-form", function (e) {
+    e.preventDefault();
+    if (!lastImport) return;
+
+    const rates = {};
+    let missing = 0;
+    $(this)
+        .find(".exchange-rate")
+        .each(function () {
+            const rate = parseFloat(this.value);
+            if (Number.isFinite(rate) && rate > 0) {
+                rates[this.dataset.currency] = rate;
+            } else {
+                missing++;
+            }
+        });
+
+    exchangeRates = rates;
+    buildReport();
+
+    $("#exchange-rate-status")
+        .toggleClass("text-success", missing === 0)
+        .text(
+            missing === 0
+                ? "Converted to USD."
+                : `${missing} ${missing > 1 ? "currencies" : "currency"} without a rate kept as-is.`,
+        );
+});
 
 const getImportFiles = () => {
     if (!folderFiles || folderFiles.length === 0) return;
@@ -1069,17 +1170,17 @@ const onSubmitImport = async (e) => {
         $("#import-status-bar").css("width", "100%").text("100%");
         await nextPaint();
 
-        const revenueSummary = getRevenueSummary(values, allCsvData);
-        logRevenueSummary(revenueSummary);
-
-        const tableData = convertTableData(allCsvData);
         const monthKey = $("#month-select").val();
-
-        resetData(tableData, {
+        lastImport = {
+            values,
+            allCsvData,
+            monthKey,
             exportFileName: `${currentDirectoryHandle?.name ?? "youtube-report"}_${formatMonthKey(monthKey)}`,
-            sources: getImportedSources(values, allCsvData),
-        });
-        renderRevenueSummary(revenueSummary, monthKey, Date.now() - startedAt);
+            elapsedMs: Date.now() - startedAt,
+        };
+        exchangeRates = {};
+        renderCurrencyAlert(getNonUsdFiles(allCsvData));
+        buildReport();
 
         // Đóng modal sau khi xử lý thành công
         importController = null;

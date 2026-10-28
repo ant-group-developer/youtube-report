@@ -77,7 +77,7 @@ The data aggregation relies on mapping all incoming rows from all uploaded files
     - **`MONETIZATION DISABLED`**: The amount is treated as a penalty (amount is multiplied by `-1`).
     - **`CREDIT - APPEAL`**: Treated as positive revenue matching.
     - These specific adjustments alter the `Total Revenue`.
-    - `Note` lists every adjustment type of the channel (comma separated). Amounts in a currency other than USD are applied as-is, the currency is appended to the note (e.g. `MONETIZATION DISABLED (HUF)`) and the Currency Mismatch alert lists the file.
+    - `Note` lists every adjustment type of the channel (comma separated). Amounts in a currency other than USD are listed in the Currency Mismatch alert, which has one exchange-rate input per currency (`1 HUF = ? USD`). Applying the rates rebuilds the table and the revenue-by-source summary from the last import (`applyExchangeRates` multiplies every amount of those rows); the note then shows the rate (e.g. `MONETIZATION DISABLED (HUF, rate 0.0028)`). Without a rate the amount is applied as-is and the note only shows the currency (e.g. `MONETIZATION DISABLED (HUF)`).
 4. **Affiliate Payments/Taxes** (`processAffiliatePaymentData`):
    - Mapped over onto `US Revenue`, `Tax Withheld Amount`, and updating the `Tax Withholding Rate`.
 
